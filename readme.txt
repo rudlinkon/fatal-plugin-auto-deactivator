@@ -12,7 +12,7 @@ Automatically deactivates plugins that cause fatal errors to prevent site crashe
 
 == Description ==
 
-The Fatal Plugin Deactivator plugin is a powerful tool designed to enhance the stability and reliability of your WordPress website. It automatically detects and deactivates plugins that cause fatal errors, preventing your entire site from crashing and becoming inaccessible.
+The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance the stability and reliability of your WordPress website. It automatically detects and deactivates plugins that cause fatal errors, preventing your entire site from crashing and becoming inaccessible.
 
 ### Key Features
 
@@ -44,11 +44,11 @@ This prevents the dreaded "white screen of death" and keeps your site operationa
 
 ### Why You Need This Plugin
 
-WordPress fatal errors can make your entire site inaccessible, requiring FTP or hosting panel access to fix. With Fatal Plugin Deactivator, your site remains operational even when a plugin causes a critical error, giving you time to address the issue without emergency measures.
+WordPress fatal errors can make your entire site inaccessible, requiring FTP or hosting panel access to fix. With Fatal Plugin Auto Deactivator, your site remains operational even when a plugin causes a critical error, giving you time to address the issue without emergency measures.
 
 == Installation ==
 
-1. Upload the `fatal-plugin-deactivator` folder to the `/wp-content/plugins/` directory
+1. Upload the `fatal-plugin-auto-deactivator` folder to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. That's it! The plugin works automatically with no configuration needed
 
@@ -56,7 +56,7 @@ WordPress fatal errors can make your entire site inaccessible, requiring FTP or 
 
 = Does this plugin require any configuration? =
 
-No, Fatal Plugin Deactivator works automatically right after activation with no configuration required.
+No, Fatal Plugin Auto Deactivator works automatically right after activation with no configuration required.
 
 = Will this plugin slow down my website? =
 
@@ -84,10 +84,10 @@ The current version is designed for standard WordPress installations. Multisite 
 
 == Changelog ==
 
-= 1.0.0 =
+= 0.0.1 =
 * Initial release
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release of Fatal Plugin Deactivator.
+= 0.0.1 =
+Initial release of Fatal Plugin Auto Deactivator.
