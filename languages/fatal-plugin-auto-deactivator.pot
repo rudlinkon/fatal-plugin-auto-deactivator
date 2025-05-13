@@ -1,0 +1,45 @@
+# Copyright (C) 2025 Your Name
+# This file is distributed under the GPL-2.0+.
+msgid ""
+msgstr ""
+"Project-Id-Version: Fatal Plugin Auto Deactivator 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/fatal-plugin-auto-deactivator\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-05-13T13:06:25+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.11.0\n"
+"X-Domain: fatal-plugin-auto-deactivator\n"
+
+#. Plugin Name of the plugin
+#: fatal-plugin-auto-deactivator.php
+msgid "Fatal Plugin Auto Deactivator"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: fatal-plugin-auto-deactivator.php
+msgid "https://example.com/fatal-plugin-auto-deactivator"
+msgstr ""
+
+#. Description of the plugin
+#: fatal-plugin-auto-deactivator.php
+msgid "Automatically deactivates plugins that cause fatal errors to prevent site crashes."
+msgstr ""
+
+#. Author of the plugin
+#: fatal-plugin-auto-deactivator.php
+msgid "Your Name"
+msgstr ""
+
+#. Author URI of the plugin
+#: fatal-plugin-auto-deactivator.php
+msgid "https://example.com"
+msgstr ""
+
+#. translators: 1: Plugin name, 2: Error message
+#: fatal-plugin-auto-deactivator.php:93
+msgid "Fatal Plugin Auto Deactivator has deactivated \"%1$s\" due to a fatal error: %2$s"
+msgstr ""
