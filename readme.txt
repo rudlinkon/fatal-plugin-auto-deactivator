@@ -1,6 +1,5 @@
-=== Fatal Plugin Deactivator ===
+=== Fatal Plugin Auto Deactivator ===
 Contributors: rudlinkon
-Donate link: https://example.com/donate
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.0
 Tested up to: 6.8
