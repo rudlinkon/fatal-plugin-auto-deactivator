@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Fatal Plugin Auto Deactivator
- * Plugin URI: https://example.com/fatal-plugin-auto-deactivator
+ * Plugin URI: https://wordpress.org/plugins/fatal-plugin-auto-deactivator/
  * Description: Automatically deactivates plugins that cause fatal errors to prevent site crashes.
- * Version: 1.0.0
- * Author: Your Name
- * Author URI: https://example.com
+ * Version: 0.0.1
+ * Author: Linkon Miyan
+ * Author URI: https://profiles.wordpress.org/rudlinkon/
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: fatal-plugin-auto-deactivator
