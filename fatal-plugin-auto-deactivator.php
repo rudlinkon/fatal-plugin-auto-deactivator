@@ -21,7 +21,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // Define plugin constants
-define( 'FPAD_VERSION', '1.0.0' );
+define( 'FPAD_VERSION', '0.0.1' );
 define( 'FPAD_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPAD_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
