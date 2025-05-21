@@ -295,7 +295,7 @@ class FPAD_Fatal_Error_Handler {
 					margin: 0;
 					padding: 0;
 				}
-				.error-container {
+				.fpad_error_container {
 					max-width: 800px;
 					margin: 50px auto;
 					padding: 30px;
@@ -303,7 +303,7 @@ class FPAD_Fatal_Error_Handler {
 					border-radius: 5px;
 					box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 				}
-				.error-header {
+				.fpad_error_header {
 					background: #dc3232;
 					color: #fff;
 					padding: 15px 20px;
@@ -313,12 +313,12 @@ class FPAD_Fatal_Error_Handler {
 					align-items: center;
 					justify-content: space-between;
 				}
-				.error-header h1 {
+				.fpad_error_header h1 {
 					margin: 0;
 					font-size: 20px;
 					font-weight: 600;
 				}
-				.error-details {
+				.fpad_error_details {
 					background: #f8f8f8;
 					padding: 15px;
 					border-radius: 3px;
@@ -326,17 +326,17 @@ class FPAD_Fatal_Error_Handler {
 					border-left: 4px solid #ddd;
 					overflow-x: auto;
 				}
-				.error-message {
+				.fpad_error_message {
 					font-family: monospace;
 					margin: 0;
 					word-break: break-word;
 				}
-				.error-location {
+				.fpad_error_location {
 					margin-top: 10px;
 					font-size: 14px;
 					color: #666;
 				}
-				.button {
+				.fpad_button {
 					display: inline-block;
 					padding: 8px 16px;
 					background: #0073aa;
@@ -347,39 +347,39 @@ class FPAD_Fatal_Error_Handler {
 					font-size: 14px;
 					margin-right: 10px;
 				}
-				.button:hover {
+				.fpad_button:hover {
 					background: #005d8c;
 				}
-				.button.secondary {
+				.fpad_button.fpad_secondary {
 					background: #f7f7f7;
 					color: #555;
 					border: 1px solid #ccc;
 				}
-				.button.secondary:hover {
+				.fpad_button.fpad_secondary:hover {
 					background: #f0f0f0;
 				}
-				.actions {
+				.fpad_actions {
 					margin-top: 25px;
 				}
 			</style>
 		</head>
 		<body>
-			<div class="error-container">
-				<div class="error-header">
+			<div class="fpad_error_container">
+				<div class="fpad_error_header">
 					<h1>' . esc_html( $error_type ) . ' Detected</h1>
 				</div>
 				<p>A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected and resolved the issue.</p>' .
 		     ( defined( 'WP_DEBUG_DISPLAY' ) && WP_DEBUG_DISPLAY ? $plugin_info . '
-				<div class="error-details">
-					<p class="error-message">' . esc_html( $error['message'] ) . '</p>
-					<p class="error-location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>
-				</div>' : '<div class="error-details">
+				<div class="fpad_error_details">
+					<p class="fpad_error_message">' . esc_html( $error['message'] ) . '</p>
+					<p class="fpad_error_location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>
+				</div>' : '<div class="fpad_error_details">
 					<p>A technical error occurred. The issue has been resolved by deactivating the problematic plugin.</p>
 				</div>' ) . '
 				<p>You can now safely reload the page to continue browsing the site.</p>
-				<div class="actions">
-					<a href="' . esc_url( $_SERVER['REQUEST_URI'] ) . '" class="button">Reload Page</a>
-					<a href="' . esc_url( $home_url ) . '" class="button secondary">Go to Homepage</a>
+				<div class="fpad_actions">
+					<a href="' . esc_url( $_SERVER['REQUEST_URI'] ) . '" class="fpad_button">Reload Page</a>
+					<a href="' . esc_url( $home_url ) . '" class="fpad_button fpad_secondary">Go to Homepage</a>
 				</div>
 			</div>
 		</body>
