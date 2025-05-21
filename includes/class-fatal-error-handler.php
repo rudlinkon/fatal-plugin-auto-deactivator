@@ -369,7 +369,7 @@ class FPAD_Fatal_Error_Handler {
 					<h1>' . esc_html( $error_type ) . ' Detected</h1>
 				</div>
 				<p>A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected and resolved the issue.</p>' .
-		     ( defined( 'WP_DEBUG_DISPLAY' ) && WP_DEBUG_DISPLAY ? $plugin_info . '
+		     ( defined( 'WP_DEBUG' ) && WP_DEBUG ? $plugin_info . '
 				<div class="fpad_error_details">
 					<p class="fpad_error_message">' . esc_html( $error['message'] ) . '</p>
 					<p class="fpad_error_location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>
