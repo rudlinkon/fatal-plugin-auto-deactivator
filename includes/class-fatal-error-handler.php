@@ -30,12 +30,17 @@ class FPAD_Fatal_Error_Handler {
 			}
 
 			// Try to deactivate the problematic plugin
-			$this->maybe_deactivate_plugin( $error );
+			$deactivated_plugin = $this->maybe_deactivate_plugin( $error );
 
-			// Let WordPress handle the error display
-			if ( class_exists( 'WP_Fatal_Error_Handler' ) ) {
-				$wp_handler = new WP_Fatal_Error_Handler();
-				$wp_handler->handle();
+			// Display our custom error page if headers not sent
+			if ( ! headers_sent() ) {
+				$this->display_custom_error_page( $error, $deactivated_plugin );
+			} else {
+				// Let WordPress handle the error display as fallback
+				if ( class_exists( 'WP_Fatal_Error_Handler' ) ) {
+					$wp_handler = new WP_Fatal_Error_Handler();
+					$wp_handler->handle();
+				}
 			}
 		} catch ( Exception $e ) {
 			// Catch exceptions and remain silent
@@ -76,7 +81,8 @@ class FPAD_Fatal_Error_Handler {
 	 * @param array $error Error information
 	 */
 	protected function maybe_deactivate_plugin( $error ) {
-		$error_file = $error['file'];
+		$error_file         = $error['file'];
+		$deactivated_plugin = null;
 
 		// Get all active plugins
 		$active_plugins = $this->get_active_plugins();
@@ -85,10 +91,12 @@ class FPAD_Fatal_Error_Handler {
 			$plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $plugin_base );
 
 			if ( strpos( $error_file, $plugin_dir ) === 0 ) {
-				$this->deactivate_plugin( $plugin_base, $error );
+				$deactivated_plugin = $this->deactivate_plugin( $plugin_base, $error );
 				break;
 			}
 		}
+
+		return $deactivated_plugin;
 	}
 
 	/**
@@ -123,6 +131,22 @@ class FPAD_Fatal_Error_Handler {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
+		// Get plugin data if possible
+		$plugin_data = array(
+			'Name'        => $plugin_base,
+			'PluginURI'   => '',
+			'Description' => '',
+			'Version'     => '',
+			'Author'      => '',
+		);
+
+		if ( function_exists( 'get_plugin_data' ) && file_exists( WP_PLUGIN_DIR . '/' . $plugin_base ) ) {
+			$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_base, false, false );
+			if ( empty( $plugin_data['Name'] ) ) {
+				$plugin_data['Name'] = $plugin_base;
+			}
+		}
+
 		// Deactivate the plugin
 		if ( function_exists( 'deactivate_plugins' ) ) {
 			deactivate_plugins( $plugin_base );
@@ -130,7 +154,17 @@ class FPAD_Fatal_Error_Handler {
 
 			// Store deactivated plugin info for admin notice
 			$this->store_deactivated_plugin_info( $plugin_base, $error );
+
+			// Return plugin information
+			return array(
+				'plugin_base'    => $plugin_base,
+				'plugin_name'    => $plugin_data['Name'],
+				'plugin_version' => $plugin_data['Version'],
+				'error'          => $error
+			);
 		}
+
+		return null;
 	}
 
 	/**
@@ -194,5 +228,162 @@ class FPAD_Fatal_Error_Handler {
 
 		// Update the log
 		update_option( 'fpad_deactivation_log', $deactivation_log );
+	}
+
+	/**
+	 * Display a custom error page with warning and reload button
+	 *
+	 * @param array $error Error information
+	 * @param array $deactivated_plugin Information about the deactivated plugin
+	 */
+	protected function display_custom_error_page( $error, $deactivated_plugin ) {
+		// Set the HTTP status code
+		http_response_code( 500 );
+
+		// Get error type as string
+		$error_type = 'Unknown Error';
+		switch ( $error['type'] ) {
+			case E_ERROR:
+				$error_type = 'Fatal Error';
+				break;
+			case E_PARSE:
+				$error_type = 'Parse Error';
+				break;
+			case E_CORE_ERROR:
+				$error_type = 'Core Error';
+				break;
+			case E_COMPILE_ERROR:
+				$error_type = 'Compile Error';
+				break;
+			case E_USER_ERROR:
+				$error_type = 'User Error';
+				break;
+			case E_RECOVERABLE_ERROR:
+				$error_type = 'Recoverable Error';
+				break;
+		}
+
+		// Get site name and home URL
+		$site_name = 'WordPress Site';
+		$home_url  = '/';
+		if ( function_exists( 'get_bloginfo' ) ) {
+			$site_name = get_bloginfo( 'name' );
+			$home_url  = home_url();
+		}
+
+		// Prepare plugin information
+		$plugin_info = '';
+		if ( $deactivated_plugin ) {
+			$plugin_name    = $deactivated_plugin['plugin_name'];
+			$plugin_version = $deactivated_plugin['plugin_version'] ? ' v' . $deactivated_plugin['plugin_version'] : '';
+			$plugin_info    = "<p>The plugin <strong>{$plugin_name}{$plugin_version}</strong> has been automatically deactivated to prevent further errors.</p>";
+		}
+
+		// Output the error page
+		echo '<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title>' . esc_html( $error_type ) . ' - ' . esc_html( $site_name ) . '</title>
+			<style>
+				body {
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+					background: #f1f1f1;
+					color: #444;
+					line-height: 1.5;
+					margin: 0;
+					padding: 0;
+				}
+				.error-container {
+					max-width: 800px;
+					margin: 50px auto;
+					padding: 30px;
+					background: #fff;
+					border-radius: 5px;
+					box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+				}
+				.error-header {
+					background: #dc3232;
+					color: #fff;
+					padding: 15px 20px;
+					margin: -30px -30px 20px;
+					border-radius: 5px 5px 0 0;
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+				}
+				.error-header h1 {
+					margin: 0;
+					font-size: 20px;
+					font-weight: 600;
+				}
+				.error-details {
+					background: #f8f8f8;
+					padding: 15px;
+					border-radius: 3px;
+					margin: 20px 0;
+					border-left: 4px solid #ddd;
+					overflow-x: auto;
+				}
+				.error-message {
+					font-family: monospace;
+					margin: 0;
+					word-break: break-word;
+				}
+				.error-location {
+					margin-top: 10px;
+					font-size: 14px;
+					color: #666;
+				}
+				.button {
+					display: inline-block;
+					padding: 8px 16px;
+					background: #0073aa;
+					color: #fff;
+					text-decoration: none;
+					border-radius: 3px;
+					cursor: pointer;
+					font-size: 14px;
+					margin-right: 10px;
+				}
+				.button:hover {
+					background: #005d8c;
+				}
+				.button.secondary {
+					background: #f7f7f7;
+					color: #555;
+					border: 1px solid #ccc;
+				}
+				.button.secondary:hover {
+					background: #f0f0f0;
+				}
+				.actions {
+					margin-top: 25px;
+				}
+			</style>
+		</head>
+		<body>
+			<div class="error-container">
+				<div class="error-header">
+					<h1>' . esc_html( $error_type ) . ' Detected</h1>
+				</div>
+				<p>A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected and resolved the issue.</p>' .
+		     ( defined( 'WP_DEBUG_DISPLAY' ) && WP_DEBUG_DISPLAY ? $plugin_info . '
+				<div class="error-details">
+					<p class="error-message">' . esc_html( $error['message'] ) . '</p>
+					<p class="error-location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>
+				</div>' : '<div class="error-details">
+					<p>A technical error occurred. The issue has been resolved by deactivating the problematic plugin.</p>
+				</div>' ) . '
+				<p>You can now safely reload the page to continue browsing the site.</p>
+				<div class="actions">
+					<a href="' . esc_url( $_SERVER['REQUEST_URI'] ) . '" class="button">Reload Page</a>
+					<a href="' . esc_url( $home_url ) . '" class="button secondary">Go to Homepage</a>
+				</div>
+			</div>
+		</body>
+		</html>';
+		exit;
 	}
 }
