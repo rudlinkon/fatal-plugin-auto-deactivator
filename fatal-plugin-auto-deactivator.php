@@ -137,3 +137,104 @@ function fpad_uninstall() {
 	delete_option( 'fpad_deactivated_plugins' );
 	delete_option( 'fpad_deactivation_log' );
 }
+
+/**
+ * Add plugin settings page
+ */
+function fpad_add_settings_page() {
+	add_submenu_page(
+		'tools.php',
+		__( 'Fatal Plugin Auto Deactivator Log', 'fatal-plugin-auto-deactivator' ),
+		__( 'Fatal Plugin Log', 'fatal-plugin-auto-deactivator' ),
+		'manage_options',
+		'fpad-log',
+		'fpad_render_log_page'
+	);
+}
+
+add_action( 'admin_menu', 'fpad_add_settings_page' );
+
+/**
+ * Render the log page
+ */
+function fpad_render_log_page() {
+	// Check user capabilities
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	// Handle log clearing
+	if ( isset( $_POST['fpad_clear_log'] ) && isset( $_POST['fpad_nonce'] ) && wp_verify_nonce( $_POST['fpad_nonce'], 'fpad_clear_log' ) ) {
+		update_option( 'fpad_deactivation_log', array() );
+		add_settings_error( 'fpad_messages', 'fpad_message', __( 'Deactivation log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
+	}
+
+	// Get the log
+	$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+
+	// Start the page
+	echo '<div class="wrap">';
+	echo '<h1>' . esc_html__( 'Fatal Plugin Auto Deactivator Log', 'fatal-plugin-auto-deactivator' ) . '</h1>';
+
+	// Show any settings errors/messages
+	settings_errors( 'fpad_messages' );
+
+	// Clear log button
+	echo '<form method="post">';
+	wp_nonce_field( 'fpad_clear_log', 'fpad_nonce' );
+	submit_button( __( 'Clear Log', 'fatal-plugin-auto-deactivator' ), 'delete', 'fpad_clear_log', false );
+	echo '</form><br>';
+
+	// Display the log
+	if ( empty( $deactivation_log ) ) {
+		echo '<div class="notice notice-info"><p>' . esc_html__( 'No plugin deactivations have been logged yet.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
+	} else {
+		echo '<table class="widefat striped">';
+		echo '<thead>';
+		echo '<tr>';
+		echo '<th>' . esc_html__( 'Date', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'Plugin', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'Error', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'File', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '</tr>';
+		echo '</thead>';
+		echo '<tbody>';
+
+		foreach ( $deactivation_log as $entry ) {
+			// Get error type as string
+			$error_type = 'Unknown';
+			switch ( $entry['error_type'] ) {
+				case E_ERROR:
+					$error_type = 'Fatal Error';
+					break;
+				case E_PARSE:
+					$error_type = 'Parse Error';
+					break;
+				case E_CORE_ERROR:
+					$error_type = 'Core Error';
+					break;
+				case E_COMPILE_ERROR:
+					$error_type = 'Compile Error';
+					break;
+				case E_USER_ERROR:
+					$error_type = 'User Error';
+					break;
+				case E_RECOVERABLE_ERROR:
+					$error_type = 'Recoverable Error';
+					break;
+			}
+
+			echo '<tr>';
+			echo '<td>' . esc_html( $entry['date'] ) . '</td>';
+			echo '<td>' . esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small></td>';
+			echo '<td><strong>' . esc_html( $error_type ) . '</strong><br>' . esc_html( $entry['error_msg'] ) . '</td>';
+			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody>';
+		echo '</table>';
+	}
+
+	echo '</div>';
+}
