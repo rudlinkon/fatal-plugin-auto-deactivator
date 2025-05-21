@@ -10,7 +10,7 @@
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: fatal-plugin-auto-deactivator
  * Domain Path: /languages
- * Requires at least: 5.0
+ * Requires at least: 5.2
  * Requires PHP: 7.0
  * Tested up to: 6.8
  */
@@ -21,9 +21,17 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // Define plugin constants
-define( 'FPAD_VERSION', '0.0.1' );
-define( 'FPAD_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'FPAD_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+if ( ! defined( 'FPAD_VERSION' ) ) {
+	define( 'FPAD_VERSION', '0.0.1' );
+}
+
+if ( ! defined( 'FPAD_PLUGIN_DIR' ) ) {
+	define( 'FPAD_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
+
+if ( ! defined( 'FPAD_PLUGIN_URL' ) ) {
+	define( 'FPAD_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
 
 /**
  * Load plugin text domain for translations
@@ -35,37 +43,46 @@ function fpad_load_textdomain() {
 add_action( 'plugins_loaded', 'fpad_load_textdomain' );
 
 /**
- * Auto-deactivate plugins that cause fatal errors
+ * Include required files
  */
-add_action( 'shutdown', function () {
-	$error = error_get_last();
+require_once FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php';
+require_once FPAD_PLUGIN_DIR . 'includes/class-dropin-manager.php';
 
-	if ( $error && in_array( $error['type'], [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR ] ) ) {
-		$error_file = $error['file'];
+/**
+ * Plugin activation hook
+ */
+function fpad_activate() {
+	// Install the drop-in
+	$dropin_manager = new FPAD_Dropin_Manager();
+	$dropin_manager->install_dropin();
+}
 
-		// Get all active plugins
-		$active_plugins = get_option( 'active_plugins', [] );
+register_activation_hook( __FILE__, 'fpad_activate' );
 
-		foreach ( $active_plugins as $plugin_base ) {
-			$plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $plugin_base );
+/**
+ * Plugin deactivation hook
+ */
+function fpad_deactivate() {
+	// Remove the drop-in
+	$dropin_manager = new FPAD_Dropin_Manager();
+	$dropin_manager->remove_dropin();
+}
 
-			if ( strpos( $error_file, $plugin_dir ) === 0 ) {
-				require_once ABSPATH . 'wp-admin/includes/plugin.php';
-				deactivate_plugins( $plugin_base );
-				error_log( "Auto-deactivated plugin: {$plugin_base} due to fatal error in: {$error_file}" );
+register_deactivation_hook( __FILE__, 'fpad_deactivate' );
 
-				// Store deactivated plugin info for admin notice
-				$deactivated_plugins   = get_option( 'fpad_deactivated_plugins', [] );
-				$deactivated_plugins[] = [
-					'plugin' => $plugin_base,
-					'error'  => $error,
-					'time'   => time()
-				];
-				update_option( 'fpad_deactivated_plugins', $deactivated_plugins );
-			}
-		}
+/**
+ * Check if the drop-in is installed and working
+ */
+function fpad_check_dropin() {
+	$dropin_manager = new FPAD_Dropin_Manager();
+
+	// If the drop-in is not installed, try to install it
+	if ( ! $dropin_manager->is_dropin_installed() ) {
+		$dropin_manager->install_dropin();
 	}
-} );
+}
+
+add_action( 'admin_init', 'fpad_check_dropin' );
 
 /**
  * Display admin notice for deactivated plugins
@@ -112,5 +129,10 @@ register_uninstall_hook( __FILE__, 'fpad_uninstall' );
  * Clean up plugin data on uninstall
  */
 function fpad_uninstall() {
+	// Remove the drop-in
+	$dropin_manager = new FPAD_Dropin_Manager();
+	$dropin_manager->remove_dropin();
+
+	// Delete plugin options
 	delete_option( 'fpad_deactivated_plugins' );
 }
