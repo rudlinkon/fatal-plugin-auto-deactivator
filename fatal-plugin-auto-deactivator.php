@@ -135,4 +135,5 @@ function fpad_uninstall() {
 
 	// Delete plugin options
 	delete_option( 'fpad_deactivated_plugins' );
+	delete_option( 'fpad_deactivation_log' );
 }

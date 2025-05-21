@@ -144,6 +144,7 @@ class FPAD_Fatal_Error_Handler {
 			return;
 		}
 
+		// Store for admin notice (temporary storage, cleared after displaying)
 		$deactivated_plugins   = get_option( 'fpad_deactivated_plugins', array() );
 		$deactivated_plugins[] = array(
 			'plugin' => $plugin_base,
@@ -151,5 +152,47 @@ class FPAD_Fatal_Error_Handler {
 			'time'   => time(),
 		);
 		update_option( 'fpad_deactivated_plugins', $deactivated_plugins );
+
+		// Store in permanent log
+		$this->add_to_deactivation_log( $plugin_base, $error );
+	}
+
+	/**
+	 * Add an entry to the permanent deactivation log
+	 *
+	 * @param string $plugin_base Plugin base name
+	 * @param array $error Error information
+	 */
+	protected function add_to_deactivation_log( $plugin_base, $error ) {
+		// Get the current log
+		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+
+		// Get plugin data if possible
+		$plugin_name = $plugin_base;
+		if ( function_exists( 'get_plugin_data' ) && file_exists( WP_PLUGIN_DIR . '/' . $plugin_base ) ) {
+			$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_base );
+			$plugin_name = ! empty( $plugin_data['Name'] ) ? $plugin_data['Name'] : $plugin_base;
+		}
+
+		// Create a new log entry
+		$log_entry = array(
+			'plugin'      => $plugin_base,
+			'plugin_name' => $plugin_name,
+			'error_type'  => $error['type'],
+			'error_msg'   => $error['message'],
+			'error_file'  => $error['file'],
+			'error_line'  => $error['line'],
+			'time'        => time(),
+			'date'        => date( 'Y-m-d H:i:s' ),
+		);
+
+		// Add to the log (limit to 100 entries to prevent database bloat)
+		array_unshift( $deactivation_log, $log_entry );
+		if ( count( $deactivation_log ) > 100 ) {
+			$deactivation_log = array_slice( $deactivation_log, 0, 100 );
+		}
+
+		// Update the log
+		update_option( 'fpad_deactivation_log', $deactivation_log );
 	}
 }
