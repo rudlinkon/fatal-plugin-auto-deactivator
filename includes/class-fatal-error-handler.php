@@ -115,7 +115,7 @@ class FPAD_Fatal_Error_Handler {
 	 * Deactivate a plugin and log the error
 	 *
 	 * @param string $plugin_base Plugin base name
-	 * @param array  $error       Error information
+	 * @param array $error Error information
 	 */
 	protected function deactivate_plugin( $plugin_base, $error ) {
 		// Make sure we have access to WordPress functions
@@ -137,7 +137,7 @@ class FPAD_Fatal_Error_Handler {
 	 * Store information about the deactivated plugin for admin notices
 	 *
 	 * @param string $plugin_base Plugin base name
-	 * @param array  $error       Error information
+	 * @param array $error Error information
 	 */
 	protected function store_deactivated_plugin_info( $plugin_base, $error ) {
 		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {

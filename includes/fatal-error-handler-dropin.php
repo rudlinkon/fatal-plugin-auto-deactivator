@@ -1,9 +1,10 @@
 <?php
 /**
- * WordPress Fatal Error Handler
- *
- * This drop-in is part of the Fatal Plugin Auto Deactivator plugin.
- * It automatically deactivates plugins that cause fatal errors.
+ * Plugin Name: Fatal Plugin Auto Deactivator (Drop-in)
+ * Description: This drop-in is part of the Fatal Plugin Auto Deactivator plugin. It automatically deactivates plugins that cause fatal errors.
+ * Plugin URI: https://wordpress.org/plugins/fatal-plugin-auto-deactivator/
+ * Author: Linkon Miyan
+ * Author URI: https://profiles.wordpress.org/rudlinkon/
  *
  * @package Fatal_Plugin_Auto_Deactivator
  */

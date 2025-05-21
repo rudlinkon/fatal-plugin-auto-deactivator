@@ -53,6 +53,7 @@ class FPAD_Dropin_Manager {
 		// Check if we can write to the wp-content directory
 		if ( ! is_writable( WP_CONTENT_DIR ) ) {
 			error_log( 'Fatal Plugin Auto Deactivator: Cannot write to wp-content directory' );
+
 			return false;
 		}
 
@@ -81,6 +82,7 @@ class FPAD_Dropin_Manager {
 				return @unlink( $this->dropin_path );
 			}
 		}
+
 		return true;
 	}
 
@@ -96,6 +98,7 @@ class FPAD_Dropin_Manager {
 
 		// Check if the drop-in is ours
 		$content = file_get_contents( $this->dropin_path );
+
 		return strpos( $content, 'FPAD_Fatal_Error_Handler' ) !== false;
 	}
 
@@ -112,6 +115,7 @@ class FPAD_Dropin_Manager {
 		$handler_path = FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php';
 		if ( ! file_exists( $handler_path ) ) {
 			error_log( 'Fatal Plugin Auto Deactivator: Fatal error handler class not found' );
+
 			return false;
 		}
 
