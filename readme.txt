@@ -80,7 +80,10 @@ The current version is designed for standard WordPress installations. Multisite 
 
 == Screenshots ==
 
-1. Admin notification showing a deactivated plugin and error details
+1. Fatal error detected. Problematic plugin auto-deactivated (requires WP_DEBUG true).
+2. Fatal error detected. Problematic plugin auto-deactivated (WP_DEBUG is false).
+3. Admin notification showing a deactivated plugin and error details
+2. Plugin causing fatal error was auto-deactivated for site safety.
 
 == Changelog ==
 
