@@ -32,11 +32,44 @@ class FPAD_Dropin_Manager {
 	protected $source_path;
 
 	/**
+	 * WordPress Filesystem API
+	 *
+	 * @var WP_Filesystem_Base
+	 */
+	protected $filesystem;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
 		$this->dropin_path = WP_CONTENT_DIR . '/fatal-error-handler.php';
 		$this->source_path = FPAD_PLUGIN_DIR . 'includes/fatal-error-handler-dropin.php';
+		$this->init_filesystem();
+	}
+
+	/**
+	 * Initialize the WordPress Filesystem API
+	 *
+	 * @return bool True if filesystem was initialized successfully, false otherwise
+	 */
+	protected function init_filesystem() {
+		global $wp_filesystem;
+
+		// Include the file.php if it's not already included
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		// Initialize the filesystem
+		$initialized = WP_Filesystem();
+
+		if ( $initialized ) {
+			$this->filesystem = $wp_filesystem;
+		} else {
+			error_log( 'Fatal Plugin Auto Deactivator: Failed to initialize filesystem' );
+		}
+
+		return $initialized;
 	}
 
 	/**
@@ -51,7 +84,7 @@ class FPAD_Dropin_Manager {
 		}
 
 		// Check if we can write to the wp-content directory
-		if ( ! is_writable( WP_CONTENT_DIR ) ) {
+		if ( ! $this->filesystem->is_writable( WP_CONTENT_DIR ) ) {
 			error_log( 'Fatal Plugin Auto Deactivator: Cannot write to wp-content directory' );
 
 			return false;
@@ -63,7 +96,7 @@ class FPAD_Dropin_Manager {
 		if ( $result ) {
 			// Set the same permissions as the source file
 			$perms = fileperms( $this->source_path );
-			chmod( $this->dropin_path, $perms );
+			$this->filesystem->chmod( $this->dropin_path, $perms );
 		}
 
 		return $result;
@@ -108,7 +141,7 @@ class FPAD_Dropin_Manager {
 	protected function create_dropin_source() {
 		// Make sure the includes directory exists
 		if ( ! is_dir( FPAD_PLUGIN_DIR . 'includes' ) ) {
-			mkdir( FPAD_PLUGIN_DIR . 'includes', 0755, true );
+			$this->filesystem->mkdir( FPAD_PLUGIN_DIR . 'includes', FS_CHMOD_DIR );
 		}
 
 		// Get the content of the fatal error handler class
@@ -140,7 +173,7 @@ return new FPAD_Fatal_Error_Handler();
 ';
 
 		file_put_contents( $this->source_path, $dropin_content );
-		chmod( $this->source_path, 0644 );
+		$this->filesystem->chmod( $this->source_path, 0644 );
 
 		return true;
 	}
