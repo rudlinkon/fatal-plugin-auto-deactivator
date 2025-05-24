@@ -1,7 +1,7 @@
 === Fatal Plugin Auto Deactivator - Never let a plugin break your site ===
 Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
-Requires at least: 5.0
+Requires at least: 5.2
 Tested up to: 6.8
 Stable tag: 1.0.0
 Requires PHP: 7.0
