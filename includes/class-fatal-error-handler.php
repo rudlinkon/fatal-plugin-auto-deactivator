@@ -379,7 +379,7 @@ class FPAD_Fatal_Error_Handler {
 				</div>' ) . '
 				<p>You can now safely reload the page to continue browsing the site.</p>
 				<div class="fpad_actions">
-					<a href="' . esc_url( $_SERVER['REQUEST_URI'] ) . '" class="fpad_button">Reload Page</a>
+					<a href="' . esc_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ) ) . '" class="fpad_button">Reload Page</a>
 					<a href="' . esc_url( $home_url ) . '" class="fpad_button fpad_secondary">Go to Homepage</a>
 				</div>
 			</div>
