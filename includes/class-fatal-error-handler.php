@@ -218,7 +218,7 @@ class FPAD_Fatal_Error_Handler {
 			'error_file'  => $error['file'],
 			'error_line'  => $error['line'],
 			'time'        => time(),
-			'date'        => date( 'Y-m-d H:i:s' ),
+			'date'        => gmdate( 'Y-m-d H:i:s' ),
 		);
 
 		// Add to the log (limit to 100 entries to prevent database bloat)
