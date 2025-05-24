@@ -79,7 +79,7 @@ class FPAD_Dropin_Manager {
 			// Check if the drop-in is ours before removing it
 			$content = file_get_contents( $this->dropin_path );
 			if ( strpos( $content, 'FPAD_Fatal_Error_Handler' ) !== false ) {
-				return @unlink( $this->dropin_path );
+				return wp_delete_file( $this->dropin_path );
 			}
 		}
 
