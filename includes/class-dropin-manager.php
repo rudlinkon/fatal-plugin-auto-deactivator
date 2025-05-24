@@ -66,6 +66,7 @@ class FPAD_Dropin_Manager {
 		if ( $initialized ) {
 			$this->filesystem = $wp_filesystem;
 		} else {
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Fatal Plugin Auto Deactivator: Failed to initialize filesystem' );
 		}
 
@@ -85,6 +86,7 @@ class FPAD_Dropin_Manager {
 
 		// Check if we can write to the wp-content directory
 		if ( ! $this->filesystem->is_writable( WP_CONTENT_DIR ) ) {
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Fatal Plugin Auto Deactivator: Cannot write to wp-content directory' );
 
 			return false;
@@ -147,6 +149,7 @@ class FPAD_Dropin_Manager {
 		// Get the content of the fatal error handler class
 		$handler_path = FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php';
 		if ( ! file_exists( $handler_path ) ) {
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'Fatal Plugin Auto Deactivator: Fatal error handler class not found' );
 
 			return false;

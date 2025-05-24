@@ -150,6 +150,7 @@ class FPAD_Fatal_Error_Handler {
 		// Deactivate the plugin
 		if ( function_exists( 'deactivate_plugins' ) ) {
 			deactivate_plugins( $plugin_base );
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( "Fatal Plugin Auto Deactivator: Auto-deactivated plugin: {$plugin_base} due to fatal error in: {$error['file']}" );
 
 			// Store deactivated plugin info for admin notice
