@@ -189,12 +189,26 @@ function fpad_render_log_page() {
 	if ( empty( $deactivation_log ) ) {
 		echo '<div class="notice notice-info"><p>' . esc_html__( 'No plugin deactivations have been logged yet.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
 	} else {
-		echo '<table class="widefat striped">';
+		// Add custom CSS for the log table
+		echo '<style>
+			.fpad-log-table tr.log-entry-row:nth-child(4n+1),
+			.fpad-log-table tr.log-entry-row:nth-child(4n+2) {
+				background-color: #f9f9f9;
+			}
+			.fpad-log-table tr.log-entry-row:nth-child(4n+3),
+			.fpad-log-table tr.log-entry-row:nth-child(4n+4) {
+				background-color: #ffffff;
+			}
+			.fpad-log-table tr.error-row {
+				border-bottom: 1px solid #e5e5e5;
+			}
+		</style>';
+
+		echo '<table class="widefat fpad-log-table">';
 		echo '<thead>';
 		echo '<tr>';
 		echo '<th>' . esc_html__( 'Date', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'Plugin', 'fatal-plugin-auto-deactivator' ) . '</th>';
-		echo '<th>' . esc_html__( 'Error', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'File', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '</tr>';
 		echo '</thead>';
@@ -224,11 +238,13 @@ function fpad_render_log_page() {
 					break;
 			}
 
-			echo '<tr>';
+			echo '<tr class="log-entry-row">';
 			echo '<td>' . esc_html( $entry['date'] ) . '</td>';
 			echo '<td>' . esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small></td>';
-			echo '<td><strong>' . esc_html( $error_type ) . '</strong><br>' . esc_html( $entry['error_msg'] ) . '</td>';
 			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
+			echo '</tr>';
+			echo '<tr class="log-entry-row error-row">';
+			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong><br><pre>' . esc_html( $entry['error_msg'] ) . '</pre></td>';
 			echo '</tr>';
 		}
 
