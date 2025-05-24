@@ -1,4 +1,4 @@
-=== Fatal Plugin Auto Deactivator ===
+=== Fatal Plugin Auto Deactivator - Never let a plugin break your site ===
 Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.0
@@ -22,6 +22,7 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
 * **Error Logging**: Records detailed information about the error for troubleshooting
 * **Zero Configuration**: Works right out of the box with no setup required
+* **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
 
 ### How It Works
 
@@ -32,6 +33,7 @@ When a fatal error occurs on your WordPress site, this plugin:
 3. Automatically deactivates only that specific plugin
 4. Logs the action for reference
 5. Displays an admin notice with details when you next log in
+6. Shows a user-friendly error page to visitors instead of the white screen of death
 
 This prevents the dreaded "white screen of death" and keeps your site operational while you address the underlying issue.
 
@@ -78,13 +80,24 @@ Yes, you can reactivate the plugin through the normal WordPress plugins page. Ho
 
 The current version is designed for standard WordPress installations. Multisite support may be added in future updates.
 
+= How does the plugin detect which plugin caused a fatal error? =
+
+The plugin analyzes the error stack trace to identify which plugin file triggered the fatal error, then deactivates only that specific plugin.
+
+= Will this plugin prevent all types of errors? =
+
+This plugin specifically targets fatal PHP errors that would normally make your site inaccessible. It doesn't handle warnings, notices, or other non-fatal errors.
+
 == Screenshots ==
 
-1. Admin notification showing a deactivated plugin and error details
+1. Fatal error detected. Problematic plugin auto-deactivated (requires WP_DEBUG true).
+2. Fatal error detected. Problematic plugin auto-deactivated (WP_DEBUG is false).
+3. Admin notification showing a deactivated plugin and error details
+2. Plugin causing fatal error was auto-deactivated for site safety.
 
 == Changelog ==
 
-= 1.0.0 - 21/05/2025 =
+= 1.0.0 - 22/05/2025 =
 - Initial release
 
 == Upgrade Notice ==
