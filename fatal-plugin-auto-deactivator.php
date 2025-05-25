@@ -3,7 +3,7 @@
  * Plugin Name: Fatal Plugin Auto Deactivator
  * Plugin URI: https://wordpress.org/plugins/fatal-plugin-auto-deactivator/
  * Description: Automatically deactivates plugins that cause fatal errors to prevent site crashes.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Linkon Miyan
  * Author URI: https://profiles.wordpress.org/rudlinkon/
  * License: GPL-2.0+
@@ -22,7 +22,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Define plugin constants
 if ( ! defined( 'FPAD_VERSION' ) ) {
-	define( 'FPAD_VERSION', '1.0.0' );
+	define( 'FPAD_VERSION', '1.0.1' );
 }
 
 if ( ! defined( 'FPAD_PLUGIN_DIR' ) ) {
