@@ -1,9 +1,9 @@
 === Fatal Plugin Auto Deactivator - Never let a plugin break your site ===
 Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
-Requires at least: 5.0
+Requires at least: 5.2
 Tested up to: 6.8
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -97,10 +97,14 @@ This plugin specifically targets fatal PHP errors that would normally make your 
 
 == Changelog ==
 
+= 1.0.1 - 25/05/2025 =
+- Improved: Security Enhancement
+- Few minor bug fixes & improvements
+
 = 1.0.0 - 22/05/2025 =
 - Initial release
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release of Fatal Plugin Auto Deactivator.
+= 1.0.1 =
+We have improved security and fixed few bugs. Please update to the latest version.

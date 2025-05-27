@@ -150,6 +150,7 @@ class FPAD_Fatal_Error_Handler {
 		// Deactivate the plugin
 		if ( function_exists( 'deactivate_plugins' ) ) {
 			deactivate_plugins( $plugin_base );
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( "Fatal Plugin Auto Deactivator: Auto-deactivated plugin: {$plugin_base} due to fatal error in: {$error['file']}" );
 
 			// Store deactivated plugin info for admin notice
@@ -217,7 +218,7 @@ class FPAD_Fatal_Error_Handler {
 			'error_file'  => $error['file'],
 			'error_line'  => $error['line'],
 			'time'        => time(),
-			'date'        => date( 'Y-m-d H:i:s' ),
+			'date'        => gmdate( 'Y-m-d H:i:s' ),
 		);
 
 		// Add to the log (limit to 100 entries to prevent database bloat)
@@ -369,6 +370,7 @@ class FPAD_Fatal_Error_Handler {
 					<h1>' . esc_html( $error_type ) . ' Detected</h1>
 				</div>
 				<p>A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected and resolved the issue.</p>' .
+		     //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		     ( defined( 'WP_DEBUG' ) && WP_DEBUG ? $plugin_info . '
 				<div class="fpad_error_details">
 					<p class="fpad_error_message">' . esc_html( $error['message'] ) . '</p>
@@ -378,7 +380,7 @@ class FPAD_Fatal_Error_Handler {
 				</div>' ) . '
 				<p>You can now safely reload the page to continue browsing the site.</p>
 				<div class="fpad_actions">
-					<a href="' . esc_url( $_SERVER['REQUEST_URI'] ) . '" class="fpad_button">Reload Page</a>
+					<a href="' . esc_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ) ) . '" class="fpad_button">Reload Page</a>
 					<a href="' . esc_url( $home_url ) . '" class="fpad_button fpad_secondary">Go to Homepage</a>
 				</div>
 			</div>
