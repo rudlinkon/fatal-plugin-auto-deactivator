@@ -1,9 +1,9 @@
 === Fatal Plugin Auto Deactivator - Never let a plugin break your site ===
 Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
-Requires at least: 5.2
+Requires at least: 5.3
 Tested up to: 6.8
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -21,6 +21,7 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 * **Instant Deactivation**: Automatically deactivates the problematic plugin during the shutdown phase
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
 * **Persistent Error Logging**: Records detailed information about errors in a permanent log for troubleshooting
+* **Error Log Management Page**: Dedicated admin page to view, manage, and clear error logs with detailed history
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
 * **Debug-Aware Display**: Shows detailed error information only when WP_DEBUG_DISPLAY is enabled for security
@@ -120,6 +121,18 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 
 == Changelog ==
 
+= 1.1.0 - 01/06/2025 =
+- Added: New "Fatal Plugin Log" admin subpage under Tools for comprehensive error management
+- Added: Detailed log table showing date, time, plugin, file, line number, and error message
+- Added: "Clear Log" functionality with nonce protection
+- Added: "View Log" action link on plugin list for quick access
+- Added: Enhanced error type detection (Fatal, Parse, Core, etc.)
+- Added: Security checks during drop-in file install and management
+- Improved: Validation, sanitization, and formatting of error messages with monospace font
+- Improved: UI styling using WordPress admin standards and alternating row colors
+- Improved: Codebase optimized for better performance
+- Few minor bug fixes & improvements
+
 = 1.0.1 - 25/05/2025 =
 - Improved: Security Enhancement
 - Few minor bug fixes & improvements
@@ -129,5 +142,5 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 
 == Upgrade Notice ==
 
-= 1.0.1 =
-We have improved security and fixed few bugs. Please update to the latest version.
+= 1.1.0 =
+We have added a dedicated admin subpage for viewing and managing error logs. Please update to the latest version.
