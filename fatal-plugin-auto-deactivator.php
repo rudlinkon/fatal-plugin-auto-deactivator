@@ -166,7 +166,7 @@ function fpad_render_log_page() {
 	// Handle log clearing
 	if ( isset( $_POST['fpad_clear_log'] ) && isset( $_POST['fpad_nonce'] ) && wp_verify_nonce( $_POST['fpad_nonce'], 'fpad_clear_log' ) ) {
 		update_option( 'fpad_deactivation_log', array() );
-		add_settings_error( 'fpad_messages', 'fpad_message', __( 'Deactivation log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
+		add_settings_error( 'fpad_messages', 'fpad_message', __( 'Fatal Plugin Auto Deactivator log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
 	}
 
 	// Get the log
