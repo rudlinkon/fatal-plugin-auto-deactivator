@@ -124,7 +124,7 @@ class FPAD_Admin {
 		echo '<style>
 			.fpad-log-table tr.log-entry-row:nth-child(4n+1),
 			.fpad-log-table tr.log-entry-row:nth-child(4n+2) {
-				background-color: #f9f9f9;
+				background-color: #f0f0f0;
 			}
 			.fpad-log-table tr.log-entry-row:nth-child(4n+3),
 			.fpad-log-table tr.log-entry-row:nth-child(4n+4) {
