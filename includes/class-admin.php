@@ -180,7 +180,7 @@ class FPAD_Admin {
 			$error_type = self::get_error_type_string( $entry['error_type'] );
 
 			echo '<tr class="log-entry-row">';
-			echo '<td>' . esc_html( $entry['date'] ) . '</td>';
+			echo '<td>' . wp_date( 'Y-m-d', $entry['time'] ) . "<br>" . wp_date( 'H:i:s a', $entry['time'] ) . '</td>';
 			echo '<td>' . esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small></td>';
 			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
