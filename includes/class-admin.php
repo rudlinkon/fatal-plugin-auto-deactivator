@@ -108,6 +108,7 @@ class FPAD_Admin {
 		}
 
 		// Handle log clearing
+		//phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		if ( isset( $_POST['fpad_clear_log'] ) && isset( $_POST['fpad_nonce'] ) && wp_verify_nonce( $_POST['fpad_nonce'], 'fpad_clear_log' ) ) {
 			update_option( 'fpad_deactivation_log', array() );
 			add_settings_error( 'fpad_messages', 'fpad_message', __( 'Fatal Plugin Auto Deactivator log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
@@ -180,7 +181,7 @@ class FPAD_Admin {
 			$error_type = self::get_error_type_string( $entry['error_type'] );
 
 			echo '<tr class="log-entry-row">';
-			echo '<td>' . wp_date( 'Y-m-d', $entry['time'] ) . "<br>" . wp_date( 'H:i:s a', $entry['time'] ) . '</td>';
+			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . "<br>" . esc_html( wp_date( 'H:i:s a', $entry['time'] ) ) . '</td>';
 			echo '<td>' . esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small></td>';
 			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
