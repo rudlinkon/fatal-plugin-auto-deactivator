@@ -47,7 +47,7 @@ class FPAD_Admin {
 			$error_message   = $plugin_data['error']['message'];
 
 			echo '<div class="notice notice-error is-dismissible">';
-			echo '<p>' . sprintf(
+			echo '<p style="font-family: monospace;word-break: break-word;white-space: pre-wrap;">' . sprintf(
 				/* translators: 1: Plugin name, 2: Error message */
 					esc_html__( 'Fatal Plugin Auto Deactivator has deactivated "%1$s" due to a fatal error: %2$s', 'fatal-plugin-auto-deactivator' ),
 					'<strong>' . esc_html( $plugin_name ) . '</strong>',
@@ -158,6 +158,11 @@ class FPAD_Admin {
 			.fpad-log-table tr.error-row {
 				border-bottom: 1px solid #e5e5e5;
 			}
+			.fpad-log-table .fpad_error_message {
+				font-family: monospace;
+				white-space: pre-wrap;
+				word-wrap: break-word;
+			}
 		</style>';
 
 		echo '<table class="widefat fpad-log-table">';
@@ -180,7 +185,7 @@ class FPAD_Admin {
 			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
 			echo '<tr class="log-entry-row error-row">';
-			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong><br><pre>' . esc_html( $entry['error_msg'] ) . '</pre></td>';
+			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong><br><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
 			echo '</tr>';
 		}
 

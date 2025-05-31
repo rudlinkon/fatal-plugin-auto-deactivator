@@ -331,6 +331,7 @@ class FPAD_Fatal_Error_Handler {
 					font-family: monospace;
 					margin: 0;
 					word-break: break-word;
+					white-space: pre-wrap;
 				}
 				.fpad_error_location {
 					margin-top: 10px;
