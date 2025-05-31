@@ -23,6 +23,7 @@ class FPAD_Admin {
 	public static function init() {
 		add_action( 'admin_notices', array( __CLASS__, 'display_admin_notices' ) );
 		add_action( 'admin_menu', array( __CLASS__, 'add_settings_page' ) );
+		add_filter( 'plugin_action_links_fatal-plugin-auto-deactivator/fatal-plugin-auto-deactivator.php', array( __CLASS__, 'add_plugin_action_links' ) );
 	}
 
 	/**
@@ -71,6 +72,30 @@ class FPAD_Admin {
 			'fpad-log',
 			array( __CLASS__, 'render_log_page' )
 		);
+	}
+
+	/**
+	 * Add plugin action links
+	 *
+	 * @param array $links Existing plugin action links
+	 *
+	 * @return array Modified plugin action links
+	 */
+	public static function add_plugin_action_links( $links ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return $links;
+		}
+
+		$log_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'tools.php?page=fpad-log' ) ),
+			esc_html__( 'View Log', 'fatal-plugin-auto-deactivator' )
+		);
+
+		// Add the log link at the beginning of the array
+		$links[] = $log_link;
+
+		return $links;
 	}
 
 	/**
