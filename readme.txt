@@ -16,26 +16,30 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 
 ### Key Features
 
-* **Automatic Error Detection**: Monitors for fatal PHP errors in real-time
-* **Smart Plugin Identification**: Identifies which plugin is causing the fatal error
-* **Instant Deactivation**: Automatically deactivates the problematic plugin
+* **Automatic Error Detection**: Monitors for fatal PHP errors in real-time using WordPress drop-in technology
+* **Smart Plugin Identification**: Identifies which plugin is causing the fatal error through stack trace analysis
+* **Instant Deactivation**: Automatically deactivates the problematic plugin during the shutdown phase
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
-* **Error Logging**: Records detailed information about the error for troubleshooting
+* **Persistent Error Logging**: Records detailed information about errors in a permanent log for troubleshooting
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
+* **Debug-Aware Display**: Shows detailed error information only when WP_DEBUG_DISPLAY is enabled for security
+* **Drop-in Management**: Automatically installs and manages WordPress fatal-error-handler.php drop-in
 
 ### How It Works
 
-When a fatal error occurs on your WordPress site, this plugin:
+This plugin uses WordPress's built-in drop-in system to provide the most reliable error handling possible. When activated, it:
 
-1. Captures the error details during the shutdown phase
-2. Identifies which plugin is responsible for the error
-3. Automatically deactivates only that specific plugin
-4. Logs the action for reference
-5. Displays an admin notice with details when you next log in
-6. Shows a user-friendly error page to visitors instead of the white screen of death
+1. **Installs a Drop-in**: Creates a `fatal-error-handler.php` file in your wp-content directory
+2. **Monitors for Errors**: WordPress automatically uses this drop-in when fatal errors occur
+3. **Captures Error Details**: Records the error message, file, and line number during the shutdown phase
+4. **Identifies the Plugin**: Analyzes the error stack trace to determine which plugin caused the issue
+5. **Deactivates Safely**: Automatically deactivates only the problematic plugin
+6. **Logs Everything**: Stores detailed error information in a permanent log for troubleshooting
+7. **Notifies Admins**: Displays clear admin notices with error details when you next log in
+8. **Shows User-Friendly Pages**: Displays a custom error page with reload button instead of the white screen of death
 
-This prevents the dreaded "white screen of death" and keeps your site operational while you address the underlying issue.
+The drop-in approach ensures maximum reliability since it operates at the WordPress core level, even when other plugins fail.
 
 ### Use Cases
 
@@ -52,7 +56,10 @@ WordPress fatal errors can make your entire site inaccessible, requiring FTP or 
 
 1. Upload the `fatal-plugin-auto-deactivator` folder to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. That's it! The plugin works automatically with no configuration needed
+3. The plugin will automatically install the required drop-in file (`fatal-error-handler.php`) in your wp-content directory
+4. That's it! The plugin works automatically with no configuration needed
+
+**Note**: The plugin requires write permissions to your wp-content directory to install the drop-in file. If activation fails, check your file permissions.
 
 == Frequently Asked Questions ==
 
@@ -87,6 +94,22 @@ The plugin analyzes the error stack trace to identify which plugin file triggere
 = Will this plugin prevent all types of errors? =
 
 This plugin specifically targets fatal PHP errors that would normally make your site inaccessible. It doesn't handle warnings, notices, or other non-fatal errors.
+
+= What is a drop-in and why does this plugin use one? =
+
+A drop-in is a special type of WordPress file that replaces core functionality. This plugin uses the `fatal-error-handler.php` drop-in to ensure it can handle errors even when other plugins fail. The drop-in is automatically installed when you activate the plugin and removed when you deactivate it.
+
+= Will the drop-in conflict with other plugins? =
+
+No, the drop-in is specifically designed for fatal error handling and won't conflict with other plugins. If another plugin tries to install its own fatal error handler drop-in, this plugin will detect it and avoid overwriting it.
+
+= Why do I see detailed error information sometimes but not others? =
+
+For security reasons, detailed error information (file paths, line numbers, error messages) is only displayed when WP_DEBUG_DISPLAY is enabled in your WordPress configuration. When disabled, visitors see a generic error message while administrators still receive detailed notifications in the dashboard.
+
+= Where are the error logs stored? =
+
+Error logs are stored in your WordPress database as options. The plugin maintains both temporary logs (for admin notifications) and permanent logs (for troubleshooting history). You can view these through your WordPress admin dashboard.
 
 == Screenshots ==
 
