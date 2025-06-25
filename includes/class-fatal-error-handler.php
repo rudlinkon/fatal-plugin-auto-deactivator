@@ -32,16 +32,8 @@ class FPAD_Fatal_Error_Handler {
 			// Try to deactivate the problematic plugin
 			$deactivated_plugin = $this->maybe_deactivate_plugin( $error );
 
-			// Display our custom error page if headers not sent
-			if ( ! headers_sent() ) {
-				$this->display_custom_error_page( $error, $deactivated_plugin );
-			} else {
-				// Let WordPress handle the error display as fallback
-				if ( class_exists( 'WP_Fatal_Error_Handler' ) ) {
-					$wp_handler = new WP_Fatal_Error_Handler();
-					$wp_handler->handle();
-				}
-			}
+			// Display our custom error page
+			$this->display_custom_error_page( $error, $deactivated_plugin );
 		} catch ( Exception $e ) {
 			// Catch exceptions and remain silent
 		}
