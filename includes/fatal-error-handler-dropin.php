@@ -25,5 +25,7 @@ if ( ! class_exists( 'FPAD_Fatal_Error_Handler' ) ) {
 	require_once FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php';
 }
 
+define( 'QM_DISABLE_ERROR_HANDLER', true );
+
 // Return an instance of our custom error handler
 return new FPAD_Fatal_Error_Handler();
