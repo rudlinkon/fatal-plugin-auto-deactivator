@@ -25,6 +25,10 @@ if ( ! defined( 'FPAD_VERSION' ) ) {
 	define( 'FPAD_VERSION', '1.1.0' );
 }
 
+if ( ! defined( 'FPAD_PLUGIN_BASENAME' ) ) {
+	define( 'FPAD_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+}
+
 if ( ! defined( 'FPAD_PLUGIN_DIR' ) ) {
 	define( 'FPAD_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 }
