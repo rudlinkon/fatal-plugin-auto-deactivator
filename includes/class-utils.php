@@ -52,6 +52,7 @@ class FPAD_Utils {
 				// Remove the drop-in
 				$dropin_manager = new FPAD_Dropin_Manager();
 				$dropin_manager->remove_dropin();
+				$dropin_manager->install_dropin();
 			}
 		}
 	}
