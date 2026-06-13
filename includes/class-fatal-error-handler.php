@@ -279,6 +279,20 @@ class FPAD_Fatal_Error_Handler {
 			$plugin_info    = "<p>The plugin <strong>{$plugin_name}{$plugin_version}</strong> has been automatically deactivated to prevent further errors.</p>";
 		}
 
+		// Tailor the messaging to whether we could actually attribute and resolve
+		// the error. When the fatal originates outside the plugins directory (a
+		// theme, mu-plugin, or WordPress core), nothing was deactivated and we
+		// must not claim the issue was resolved.
+		if ( $deactivated_plugin ) {
+			$intro_message    = 'A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected the problematic plugin and deactivated it to resolve the issue.';
+			$generic_message  = 'A technical error occurred. The issue has been resolved by deactivating the problematic plugin.';
+			$closing_message  = 'You can now safely reload the page to continue browsing the site.';
+		} else {
+			$intro_message    = 'A fatal error occurred on your website. The Fatal Plugin Auto Deactivator detected it, but the error did not originate from a plugin (it may come from your theme, a must-use plugin, or WordPress core), so it could not be resolved automatically.';
+			$generic_message  = 'A technical error occurred. It did not originate from a plugin, so it could not be resolved automatically and may require manual attention.';
+			$closing_message  = 'You can try reloading the page, but the error may persist until it is fixed manually.';
+		}
+
 		// Output the error page
 		echo '<!DOCTYPE html>
 		<html lang="en">
@@ -369,16 +383,16 @@ class FPAD_Fatal_Error_Handler {
 				<div class="fpad_error_header">
 					<h1>' . esc_html( $error_type ) . ' Detected</h1>
 				</div>
-				<p>A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected and resolved the issue.</p>' .
+				<p>' . esc_html( $intro_message ) . '</p>' .
 		     //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		     ( defined( 'WP_DEBUG' ) && WP_DEBUG ? $plugin_info . '
 				<div class="fpad_error_details">
 					<p class="fpad_error_message">' . esc_html( $error['message'] ) . '</p>
 					<p class="fpad_error_location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>
 				</div>' : '<div class="fpad_error_details">
-					<p>A technical error occurred. The issue has been resolved by deactivating the problematic plugin.</p>
+					<p>' . esc_html( $generic_message ) . '</p>
 				</div>' ) . '
-				<p>You can now safely reload the page to continue browsing the site.</p>
+				<p>' . esc_html( $closing_message ) . '</p>
 				<div class="fpad_actions">
 					<a href="' . esc_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ) ) . '" class="fpad_button">Reload Page</a>
 					<a href="' . esc_url( $home_url ) . '" class="fpad_button fpad_secondary">Go to Homepage</a>
