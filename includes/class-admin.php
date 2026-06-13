@@ -132,11 +132,65 @@ class FPAD_Admin {
 
 		// Display the log
 		if ( empty( $deactivation_log ) ) {
-			echo '<div class="notice notice-info"><p>' . esc_html__( 'No plugin deactivations have been logged yet.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No fatal errors have been logged yet. When a plugin (or other code) triggers a fatal error, it will appear here.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
 		} else {
+			self::render_log_summary( $deactivation_log );
 			self::render_log_table( $deactivation_log );
 		}
 
+		echo '</div>';
+	}
+
+	/**
+	 * Render a summary bar with at-a-glance counts.
+	 *
+	 * @param array $deactivation_log The deactivation log entries
+	 */
+	private static function render_log_summary( $deactivation_log ) {
+		$total        = count( $deactivation_log );
+		$deactivated  = 0;
+		$unattributed = 0;
+		$latest_time  = 0;
+
+		foreach ( $deactivation_log as $entry ) {
+			$was_deactivated = isset( $entry['deactivated'] ) ? $entry['deactivated'] : ! empty( $entry['plugin'] );
+			if ( $was_deactivated ) {
+				$deactivated++;
+			}
+			if ( empty( $entry['plugin'] ) ) {
+				$unattributed++;
+			}
+			if ( ! empty( $entry['time'] ) && $entry['time'] > $latest_time ) {
+				$latest_time = $entry['time'];
+			}
+		}
+
+		$cards = array(
+			array(
+				'label' => __( 'Total fatal errors', 'fatal-plugin-auto-deactivator' ),
+				'value' => number_format_i18n( $total ),
+			),
+			array(
+				'label' => __( 'Plugins deactivated', 'fatal-plugin-auto-deactivator' ),
+				'value' => number_format_i18n( $deactivated ),
+			),
+			array(
+				'label' => __( 'Not attributed to a plugin', 'fatal-plugin-auto-deactivator' ),
+				'value' => number_format_i18n( $unattributed ),
+			),
+			array(
+				'label' => __( 'Most recent', 'fatal-plugin-auto-deactivator' ),
+				'value' => $latest_time ? wp_date( 'Y-m-d h:i a', $latest_time ) : '—',
+			),
+		);
+
+		echo '<div class="fpad-summary">';
+		foreach ( $cards as $card ) {
+			echo '<div class="fpad-summary-card">';
+			echo '<span class="fpad-summary-value">' . esc_html( $card['value'] ) . '</span>';
+			echo '<span class="fpad-summary-label">' . esc_html( $card['label'] ) . '</span>';
+			echo '</div>';
+		}
 		echo '</div>';
 	}
 
@@ -148,29 +202,78 @@ class FPAD_Admin {
 	private static function render_log_table( $deactivation_log ) {
 		// Add custom CSS for the log table
 		echo '<style>
+			.fpad-summary {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				margin: 16px 0;
+			}
+			.fpad-summary-card {
+				flex: 1 1 160px;
+				background: #fff;
+				border: 1px solid #dcdcde;
+				border-left: 4px solid #2271b1;
+				border-radius: 4px;
+				padding: 12px 16px;
+				display: flex;
+				flex-direction: column;
+			}
+			.fpad-summary-value {
+				font-size: 22px;
+				font-weight: 600;
+				line-height: 1.2;
+			}
+			.fpad-summary-label {
+				color: #646970;
+				font-size: 12px;
+				margin-top: 4px;
+			}
+			.fpad-log-table { margin-top: 8px; }
 			.fpad-log-table tr.log-entry-row:nth-child(4n+1),
 			.fpad-log-table tr.log-entry-row:nth-child(4n+2) {
-				background-color: #f5f5f5;
+				background-color: #f6f7f7;
 			}
 			.fpad-log-table tr.log-entry-row:nth-child(4n+3),
 			.fpad-log-table tr.log-entry-row:nth-child(4n+4) {
 				background-color: #ffffff;
 			}
-			.fpad-log-table tr.error-row {
-				border-bottom: 1px solid #e5e5e5;
+			.fpad-log-table tr.error-row td {
+				border-bottom: 1px solid #c3c4c7;
+				padding-top: 0;
 			}
 			.fpad-log-table .fpad_error_message {
-				font-family: monospace;
+				font-family: Menlo, Consolas, monospace;
 				white-space: pre-wrap;
 				word-wrap: break-word;
+				margin: 6px 0 0;
+				color: #d63638;
 			}
+			.fpad-log-table .fpad-file {
+				font-family: Menlo, Consolas, monospace;
+				font-size: 12px;
+				word-break: break-all;
+			}
+			.fpad-badge {
+				display: inline-block;
+				font-size: 11px;
+				font-weight: 600;
+				line-height: 1.6;
+				padding: 0 8px;
+				border-radius: 9px;
+				white-space: nowrap;
+			}
+			.fpad-badge-deactivated { background: #d5e8d4; color: #1a4d1a; }
+			.fpad-badge-logged { background: #e6e6e6; color: #50575e; }
+			.fpad-badge-source { background: #e5f0fa; color: #135e96; text-transform: capitalize; }
 		</style>';
 
 		echo '<table class="widefat fpad-log-table">';
 		echo '<thead>';
 		echo '<tr>';
 		echo '<th>' . esc_html__( 'Date', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'Source', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'Plugin', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'Status', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'File', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '</tr>';
 		echo '</thead>';
@@ -192,22 +295,92 @@ class FPAD_Admin {
 				$plugin_cell = '<em>' . esc_html__( 'Not identified', 'fatal-plugin-auto-deactivator' ) . '</em>';
 			}
 
-			$status = $deactivated
-				? esc_html__( 'Plugin deactivated', 'fatal-plugin-auto-deactivator' )
-				: esc_html__( 'Logged only — no plugin deactivated', 'fatal-plugin-auto-deactivator' );
+			// Classify the originating source from the stored file path.
+			$source       = self::classify_source( isset( $entry['error_file'] ) ? $entry['error_file'] : '' );
+			$source_badge = '<span class="fpad-badge fpad-badge-source">' . esc_html( $source ) . '</span>';
+
+			if ( $deactivated ) {
+				$status_badge = '<span class="fpad-badge fpad-badge-deactivated">' . esc_html__( 'Deactivated', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			} else {
+				$status_badge = '<span class="fpad-badge fpad-badge-logged">' . esc_html__( 'Logged only', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			}
 
 			echo '<tr class="log-entry-row">';
-			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . "<br>" . esc_html( wp_date( 'H:i:s a', $entry['time'] ) ) . '</td>';
+			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . '<br><small>' . esc_html( wp_date( 'h:i:s a', $entry['time'] ) ) . '</small></td>';
+			echo '<td>' . $source_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $plugin_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
+			echo '<td>' . $status_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo '<td class="fpad-file">' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
 			echo '<tr class="log-entry-row error-row">';
-			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong> <span class="description">(' . esc_html( $status ) . ')</span><br><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
+			echo '<td colspan="5"><strong>' . esc_html( $error_type ) . '</strong><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
 			echo '</tr>';
 		}
 
 		echo '</tbody>';
 		echo '</table>';
+	}
+
+	/**
+	 * Classify the originating source of an error from its file path.
+	 *
+	 * Mirrors FPAD_Fatal_Error_Handler::detect_error_source(), but operates on
+	 * the path stored in the log so old and new entries are labelled the same
+	 * way in the viewer.
+	 *
+	 * @param string $file Absolute path to the file that triggered the error.
+	 * @return string Human-readable source label.
+	 */
+	private static function classify_source( $file ) {
+		if ( '' === $file ) {
+			return __( 'unknown', 'fatal-plugin-auto-deactivator' );
+		}
+
+		$file      = str_replace( '\\', '/', $file );
+		$normalize = function ( $path ) {
+			return rtrim( str_replace( '\\', '/', $path ), '/' );
+		};
+
+		if ( defined( 'WPMU_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WPMU_PLUGIN_DIR ) . '/' ) ) {
+			return __( 'mu-plugin', 'fatal-plugin-auto-deactivator' );
+		}
+
+		if ( defined( 'WP_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WP_PLUGIN_DIR ) . '/' ) ) {
+			return __( 'plugin', 'fatal-plugin-auto-deactivator' );
+		}
+
+		$theme_root = function_exists( 'get_theme_root' ) ? $normalize( get_theme_root() ) : '';
+		if ( '' !== $theme_root && 0 === strpos( $file, $theme_root . '/' ) ) {
+			return __( 'theme', 'fatal-plugin-auto-deactivator' );
+		}
+
+		if ( defined( 'WP_CONTENT_DIR' ) ) {
+			$content_dir = $normalize( WP_CONTENT_DIR );
+			$dropins     = array(
+				'advanced-cache.php',
+				'object-cache.php',
+				'db.php',
+				'db-error.php',
+				'fatal-error-handler.php',
+				'maintenance.php',
+				'php-error.php',
+				'sunrise.php',
+			);
+			foreach ( $dropins as $dropin ) {
+				if ( $content_dir . '/' . $dropin === $file ) {
+					return __( 'drop-in', 'fatal-plugin-auto-deactivator' );
+				}
+			}
+		}
+
+		if ( defined( 'ABSPATH' ) ) {
+			$abspath = $normalize( ABSPATH );
+			if ( 0 === strpos( $file, $abspath . '/wp-includes/' ) || 0 === strpos( $file, $abspath . '/wp-admin/' ) ) {
+				return __( 'core', 'fatal-plugin-auto-deactivator' );
+			}
+		}
+
+		return __( 'unknown', 'fatal-plugin-auto-deactivator' );
 	}
 
 	/**
