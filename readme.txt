@@ -102,7 +102,7 @@ A drop-in is a special type of WordPress file that replaces core functionality. 
 
 = Will the drop-in conflict with other plugins? =
 
-No, the drop-in is specifically designed for fatal error handling and won't conflict with other plugins. If another plugin tries to install its own fatal error handler drop-in, this plugin will detect it and avoid overwriting it.
+WordPress allows only one `fatal-error-handler.php` drop-in at a time. While this plugin is active, it installs and maintains its own drop-in, replacing any existing fatal error handler drop-in so that error handling stays reliable. When you deactivate or uninstall this plugin, it removes only its own drop-in and leaves any non-related drop-in untouched.
 
 = Why do I see detailed error information sometimes but not others? =
 

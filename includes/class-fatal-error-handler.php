@@ -34,8 +34,8 @@ class FPAD_Fatal_Error_Handler {
 
 			// Display our custom error page
 			$this->display_custom_error_page( $error, $deactivated_plugin );
-		} catch ( Exception $e ) {
-			// Catch exceptions and remain silent
+		} catch ( Throwable $e ) {
+			// Catch any error or exception thrown by the handler and remain silent
 		}
 	}
 

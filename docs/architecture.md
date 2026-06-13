@@ -108,6 +108,9 @@ There is no autoloader and no namespace — classes use the `FPAD_` prefix and a
 These are observations from reading the code — verify intent before changing:
 
 1. **`WP_DEBUG` vs `WP_DEBUG_DISPLAY`**: code gates public error detail on `WP_DEBUG`; readme.txt documents `WP_DEBUG_DISPLAY`.
-2. **Foreign drop-in overwrite on `admin_init`**: `check_dropin()` calls `install_dropin()` whenever `is_dropin_installed()` is false — including when a *foreign* drop-in is present — and `install_dropin()` does an unconditional `copy()`. The FAQ promises foreign drop-ins are not overwritten; only `remove_dropin()` honors that.
-3. **`handle()` catches `Exception` only**, not `Throwable` — a PHP 7 `Error` thrown inside the handler would escape.
-4. **`assets.yml` workflow targets a `trunk` branch** that does not exist in this repo (branches are `master`/`dev`), so readme/asset-only deploys never trigger.
+2. **`assets.yml` workflow targets a `trunk` branch** that does not exist in this repo (branches are `master`/`dev`), so readme/asset-only deploys never trigger.
+
+Resolved (kept here for history):
+
+- **Foreign drop-in overwrite** — by design, `install_dropin()` replaces any existing `fatal-error-handler.php` while this plugin is active (only one such drop-in can exist), and `remove_dropin()` removes only our own. The FAQ in readme.txt now describes this behavior accurately.
+- **`handle()` caught `Exception` only** — now catches `Throwable`, so a PHP 7 `Error` raised inside the handler no longer escapes.
