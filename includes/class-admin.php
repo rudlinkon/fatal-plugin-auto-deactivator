@@ -180,13 +180,29 @@ class FPAD_Admin {
 			// Get error type as string
 			$error_type = self::get_error_type_string( $entry['error_type'] );
 
+			// Whether a plugin was actually deactivated. Older log entries predate
+			// this flag, so infer it from the presence of a plugin reference.
+			$deactivated = isset( $entry['deactivated'] ) ? $entry['deactivated'] : ! empty( $entry['plugin'] );
+
+			// Plugin cell: show the plugin name/basename, or a fallback when the
+			// error could not be attributed to a specific plugin.
+			if ( ! empty( $entry['plugin_name'] ) ) {
+				$plugin_cell = esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small>';
+			} else {
+				$plugin_cell = '<em>' . esc_html__( 'Not identified', 'fatal-plugin-auto-deactivator' ) . '</em>';
+			}
+
+			$status = $deactivated
+				? esc_html__( 'Plugin deactivated', 'fatal-plugin-auto-deactivator' )
+				: esc_html__( 'Logged only — no plugin deactivated', 'fatal-plugin-auto-deactivator' );
+
 			echo '<tr class="log-entry-row">';
 			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . "<br>" . esc_html( wp_date( 'H:i:s a', $entry['time'] ) ) . '</td>';
-			echo '<td>' . esc_html( $entry['plugin_name'] ) . '<br><small>' . esc_html( $entry['plugin'] ) . '</small></td>';
+			echo '<td>' . $plugin_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
 			echo '<tr class="log-entry-row error-row">';
-			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong><br><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
+			echo '<td colspan="3"><strong>' . esc_html( $error_type ) . '</strong> <span class="description">(' . esc_html( $status ) . ')</span><br><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
 			echo '</tr>';
 		}
 

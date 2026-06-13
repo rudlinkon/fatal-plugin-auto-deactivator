@@ -44,12 +44,13 @@ array(
 
 ### `fpad_deactivation_log` — permanent log
 
-Array of log entries, **newest first**, capped at 100 entries (`array_unshift` + `array_slice`). Each entry:
+Array of log entries, **newest first**, capped at 100 entries (`array_unshift` + `array_slice`). Written by `handle()` for **every** detected fatal, whether or not a plugin was attributed. Each entry:
 
 ```php
 array(
-    'plugin'      => 'some-plugin/some-plugin.php',
-    'plugin_name' => 'Some Plugin',          // resolved display name, falls back to basename
+    'plugin'      => 'some-plugin/some-plugin.php', // '' when no plugin was attributed
+    'plugin_name' => 'Some Plugin',          // resolved display name; '' when unattributed
+    'deactivated' => true,                   // bool: was a plugin actually deactivated?
     'error_type'  => E_ERROR,                // int PHP error constant
     'error_msg'   => '...',
     'error_file'  => '/path/to/file.php',
@@ -58,6 +59,8 @@ array(
     'date'        => '2025-06-01 12:34:56',  // gmdate('Y-m-d H:i:s'), UTC
 )
 ```
+
+For fatals that cannot be attributed to an active plugin (theme/core/mu-plugin), `plugin`/`plugin_name` are empty and `deactivated` is `false` — the admin log page renders these as "Not identified / Logged only". Entries written before this field existed lack `deactivated`; the log page infers it from whether `plugin` is non-empty.
 
 Both options are deleted in `FPAD_Plugin_Lifecycle::uninstall()`.
 
@@ -84,7 +87,7 @@ The error handler itself is **not** hook-based — it is invoked by WP core's sh
 | Surface | Location | Capability | Notes |
 |---------|----------|------------|-------|
 | Error notices | All wp-admin pages (`admin_notices`) | `activate_plugins` | One dismissible error notice per queued deactivation; queue cleared after display |
-| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`) | `manage_options` | Table of incidents (date/time, plugin, file:line, type, message) + Clear Log button |
+| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`) | `manage_options` | Table of incidents (date/time, plugin or "Not identified", file:line, type, message, deactivation status) + Clear Log button |
 | Clear Log form | POST to the log page | `manage_options` + nonce `fpad_clear_log` (field `fpad_nonce`) | Resets `fpad_deactivation_log` to `array()` |
 | Action link | Plugins screen row | `manage_options` | "View Log" → log page |
 
@@ -98,14 +101,13 @@ Instantiated by the drop-in; all WP calls guarded for partial-load context.
 
 | Method | Visibility | Behavior |
 |--------|------------|----------|
-| `handle()` | public | Entry point called by WP core. detect → log → deactivate → render page. Swallows `Throwable` |
+| `handle()` | public | Entry point called by WP core. detect → deactivate (if matched) → record in log (always) → render page. Swallows `Throwable` |
 | `detect_error()` | protected | `error_get_last()`; returns the error array only for E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR |
-| `log_error( $error )` | protected | `error_log()` the fatal — always, regardless of `WP_DEBUG` and whether a plugin is attributed |
-| `maybe_deactivate_plugin( $error )` | protected | Prefix-matches `$error['file']` against each active plugin's directory; first match deactivated |
+| `maybe_deactivate_plugin( $error )` | protected | Prefix-matches `$error['file']` against each active plugin's directory; first match deactivated. Returns info array or null |
 | `get_active_plugins()` | protected | `get_option( 'active_plugins' )` with manual includes fallback |
-| `deactivate_plugin( $plugin_base, $error )` | protected | `deactivate_plugins()`, `error_log()`, store options; returns info array or null |
-| `store_deactivated_plugin_info( ... )` | protected | Appends to `fpad_deactivated_plugins`, then delegates to permanent log |
-| `add_to_deactivation_log( ... )` | protected | Prepends entry to `fpad_deactivation_log`, caps at 100 |
+| `deactivate_plugin( $plugin_base, $error )` | protected | `deactivate_plugins()`, `error_log()`, queue admin notice; returns info array or null |
+| `store_deactivated_plugin_info( $plugin_base, $error )` | protected | Appends to the `fpad_deactivated_plugins` admin-notice queue |
+| `add_to_deactivation_log( $error, $deactivated_plugin = null )` | protected | Prepends an entry to `fpad_deactivation_log` (caps at 100) for every fatal; records plugin info + `deactivated` flag when attributed. Guards `get_option`/`update_option` for shutdown context |
 | `display_custom_error_page( $error, $deactivated_plugin )` | protected | Sends HTTP 500, prints self-contained HTML page (detail only if `WP_DEBUG`), `exit` |
 
 ### `FPAD_Dropin_Manager` (`includes/class-dropin-manager.php`)

@@ -29,31 +29,18 @@ class FPAD_Fatal_Error_Handler {
 				return;
 			}
 
-			// Always log the fatal error, regardless of WP_DEBUG.
-			$this->log_error( $error );
-
 			// Try to deactivate the problematic plugin
 			$deactivated_plugin = $this->maybe_deactivate_plugin( $error );
+
+			// Always record the fatal error in our log, regardless of WP_DEBUG and
+			// regardless of whether the error could be attributed to a plugin.
+			$this->add_to_deactivation_log( $error, $deactivated_plugin );
 
 			// Display our custom error page
 			$this->display_custom_error_page( $error, $deactivated_plugin );
 		} catch ( Throwable $e ) {
 			// Catch any error or exception thrown by the handler and remain silent
 		}
-	}
-
-	/**
-	 * Log the fatal error to the PHP error log.
-	 *
-	 * Always runs regardless of the WP_DEBUG setting and regardless of whether
-	 * the error can be attributed to a plugin. WP_DEBUG only controls whether
-	 * error details are shown on the front-end error page.
-	 *
-	 * @param array $error Error information
-	 */
-	protected function log_error( $error ) {
-		//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( sprintf( 'Fatal Plugin Auto Deactivator: Fatal error in %1$s on line %2$d: %3$s', $error['file'], $error['line'], $error['message'] ) );
 	}
 
 	/**
@@ -196,32 +183,35 @@ class FPAD_Fatal_Error_Handler {
 			'time'   => time(),
 		);
 		update_option( 'fpad_deactivated_plugins', $deactivated_plugins );
-
-		// Store in permanent log
-		$this->add_to_deactivation_log( $plugin_base, $error );
 	}
 
 	/**
-	 * Add an entry to the permanent deactivation log
+	 * Add an entry to the permanent error log.
 	 *
-	 * @param string $plugin_base Plugin base name
-	 * @param array $error Error information
+	 * Called for every detected fatal error so administrators can review it on
+	 * the Fatal Plugin Log page, whether or not a plugin could be attributed and
+	 * deactivated.
+	 *
+	 * @param array      $error              Error information
+	 * @param array|null $deactivated_plugin Info about the deactivated plugin, or null if none was identified
 	 */
-	protected function add_to_deactivation_log( $plugin_base, $error ) {
+	protected function add_to_deactivation_log( $error, $deactivated_plugin = null ) {
+		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
+			return;
+		}
+
 		// Get the current log
 		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
 
-		// Get plugin data if possible
-		$plugin_name = $plugin_base;
-		if ( function_exists( 'get_plugin_data' ) && file_exists( WP_PLUGIN_DIR . '/' . $plugin_base ) ) {
-			$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_base );
-			$plugin_name = ! empty( $plugin_data['Name'] ) ? $plugin_data['Name'] : $plugin_base;
-		}
+		// Resolve plugin details from the deactivation result, if any.
+		$plugin_base = $deactivated_plugin ? $deactivated_plugin['plugin_base'] : '';
+		$plugin_name = $deactivated_plugin ? $deactivated_plugin['plugin_name'] : '';
 
 		// Create a new log entry
 		$log_entry = array(
 			'plugin'      => $plugin_base,
 			'plugin_name' => $plugin_name,
+			'deactivated' => ! empty( $deactivated_plugin ),
 			'error_type'  => $error['type'],
 			'error_msg'   => $error['message'],
 			'error_file'  => $error['file'],
