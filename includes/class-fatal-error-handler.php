@@ -96,6 +96,85 @@ class FPAD_Fatal_Error_Handler {
 	}
 
 	/**
+	 * Determine where a fatal error originated based on its file path.
+	 *
+	 * Order matters: mu-plugins and plugins live under wp-content, and drop-ins
+	 * sit directly in the wp-content root, so the most specific directories are
+	 * checked before the broader ones.
+	 *
+	 * @param array $error Error information.
+	 * @return string One of: plugin, theme, mu-plugin, dropin, core, unknown.
+	 */
+	protected function detect_error_source( $error ) {
+		$file = isset( $error['file'] ) ? $error['file'] : '';
+
+		if ( '' === $file ) {
+			return 'unknown';
+		}
+
+		// Normalize directory separators so prefix matching works on Windows too.
+		$file = str_replace( '\\', '/', $file );
+
+		$normalize = function ( $path ) {
+			return rtrim( str_replace( '\\', '/', $path ), '/' );
+		};
+
+		// Must-use plugins (checked before the generic plugins directory).
+		if ( defined( 'WPMU_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WPMU_PLUGIN_DIR ) . '/' ) ) {
+			return 'mu-plugin';
+		}
+
+		// Regular plugins.
+		if ( defined( 'WP_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WP_PLUGIN_DIR ) . '/' ) ) {
+			return 'plugin';
+		}
+
+		// Themes.
+		$theme_root = '';
+		if ( function_exists( 'get_theme_root' ) ) {
+			$theme_root = $normalize( get_theme_root() );
+		} elseif ( defined( 'WP_CONTENT_DIR' ) ) {
+			$theme_root = $normalize( WP_CONTENT_DIR ) . '/themes';
+		}
+		if ( '' !== $theme_root && 0 === strpos( $file, $theme_root . '/' ) ) {
+			return 'theme';
+		}
+
+		// Drop-ins live directly in the wp-content root.
+		if ( defined( 'WP_CONTENT_DIR' ) ) {
+			$content_dir = $normalize( WP_CONTENT_DIR );
+			$dropins     = array(
+				'advanced-cache.php',
+				'object-cache.php',
+				'db.php',
+				'db-error.php',
+				'fatal-error-handler.php',
+				'maintenance.php',
+				'php-error.php',
+				'sunrise.php',
+				'blog-deleted.php',
+				'blog-inactive.php',
+				'blog-suspended.php',
+			);
+			if ( in_array( $file, array_map( function ( $name ) use ( $content_dir ) {
+				return $content_dir . '/' . $name;
+			}, $dropins ), true ) ) {
+				return 'dropin';
+			}
+		}
+
+		// WordPress core files.
+		if ( defined( 'ABSPATH' ) ) {
+			$abspath = $normalize( ABSPATH );
+			if ( 0 === strpos( $file, $abspath . '/wp-includes/' ) || 0 === strpos( $file, $abspath . '/wp-admin/' ) ) {
+				return 'core';
+			}
+		}
+
+		return 'unknown';
+	}
+
+	/**
 	 * Get all active plugins
 	 *
 	 * @return array List of active plugins
@@ -279,18 +358,54 @@ class FPAD_Fatal_Error_Handler {
 			$plugin_info    = "<p>The plugin <strong>{$plugin_name}{$plugin_version}</strong> has been automatically deactivated to prevent further errors.</p>";
 		}
 
-		// Tailor the messaging to whether we could actually attribute and resolve
-		// the error. When the fatal originates outside the plugins directory (a
-		// theme, mu-plugin, or WordPress core), nothing was deactivated and we
-		// must not claim the issue was resolved.
-		if ( $deactivated_plugin ) {
-			$intro_message    = 'A fatal error occurred on your website. The Fatal Plugin Auto Deactivator has detected the problematic plugin and deactivated it to resolve the issue.';
-			$generic_message  = 'A technical error occurred. The issue has been resolved by deactivating the problematic plugin.';
-			$closing_message  = 'You can now safely reload the page to continue browsing the site.';
-		} else {
-			$intro_message    = 'A fatal error occurred on your website. The Fatal Plugin Auto Deactivator detected it, but the error did not originate from a plugin (it may come from your theme, a must-use plugin, or WordPress core), so it could not be resolved automatically.';
-			$generic_message  = 'A technical error occurred. It did not originate from a plugin, so it could not be resolved automatically and may require manual attention.';
-			$closing_message  = 'You can try reloading the page, but the error may persist until it is fixed manually.';
+		// Tailor the messaging to the detected source of the error and whether we
+		// were actually able to take corrective action. Only a fatal attributed to
+		// a regular plugin can be auto-deactivated; everything else is reported
+		// honestly as requiring manual attention.
+		$source = $this->detect_error_source( $error );
+
+		switch ( $source ) {
+			case 'plugin':
+				if ( $deactivated_plugin ) {
+					$intro_message   = 'A fatal error was caused by a plugin on your website. The Fatal Plugin Auto Deactivator identified the plugin and automatically deactivated it to resolve the issue.';
+					$generic_message = 'A plugin caused a technical error. The issue has been resolved by automatically deactivating the problematic plugin.';
+					$closing_message = 'You can now safely reload the page to continue browsing the site.';
+				} else {
+					$intro_message   = 'A fatal error appears to have been caused by a plugin, but it could not be deactivated automatically. The plugin may need to be disabled manually.';
+					$generic_message = 'A plugin caused a technical error, but it could not be deactivated automatically and may require manual attention.';
+					$closing_message = 'You can try reloading the page, but the error may persist until the plugin is disabled manually.';
+				}
+				break;
+
+			case 'theme':
+				$intro_message   = 'A fatal error appears to be related to your active theme. Themes cannot be deactivated automatically, so this issue could not be resolved for you.';
+				$generic_message = 'A technical error appears to originate from your theme and could not be resolved automatically. It may require manual attention.';
+				$closing_message = 'You can try reloading the page, but the error may persist until the theme issue is fixed manually.';
+				break;
+
+			case 'mu-plugin':
+				$intro_message   = 'A fatal error appears to originate from a must-use (MU) plugin. Must-use plugins cannot be deactivated automatically, so this issue could not be resolved for you.';
+				$generic_message = 'A technical error appears to originate from a must-use plugin and could not be resolved automatically. It may require manual attention.';
+				$closing_message = 'You can try reloading the page, but the error may persist until the must-use plugin is fixed manually.';
+				break;
+
+			case 'dropin':
+				$intro_message   = 'A fatal error appears to be related to a WordPress drop-in. Drop-ins cannot be deactivated automatically, so this issue could not be resolved for you.';
+				$generic_message = 'A technical error appears to originate from a drop-in and could not be resolved automatically. It may require manual attention.';
+				$closing_message = 'You can try reloading the page, but the error may persist until the drop-in issue is fixed manually.';
+				break;
+
+			case 'core':
+				$intro_message   = 'A fatal error appears to be related to WordPress core. Core errors cannot be resolved automatically and usually require manual attention.';
+				$generic_message = 'A technical error appears to originate from WordPress core and could not be resolved automatically. It may require manual attention.';
+				$closing_message = 'You can try reloading the page, but the error may persist until the underlying issue is fixed manually.';
+				break;
+
+			default:
+				$intro_message   = 'A fatal error occurred on your website. The Fatal Plugin Auto Deactivator could not attribute it to a specific plugin, so it could not be resolved automatically.';
+				$generic_message = 'A technical error occurred. Its source could not be determined automatically, so it could not be resolved and may require manual attention.';
+				$closing_message = 'You can try reloading the page, but the error may persist until the underlying issue is fixed manually.';
+				break;
 		}
 
 		// Output the error page
