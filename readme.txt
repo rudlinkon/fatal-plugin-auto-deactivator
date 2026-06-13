@@ -2,8 +2,8 @@
 Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.3
-Tested up to: 6.8
-Stable tag: 1.1.0
+Tested up to: 7.0
+Stable tag: 1.2.0
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -17,11 +17,12 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 ### Key Features
 
 * **Automatic Error Detection**: Monitors for fatal PHP errors in real-time using WordPress drop-in technology
-* **Smart Plugin Identification**: Identifies which plugin is causing the fatal error through stack trace analysis
+* **Smart Plugin Identification**: Identifies which plugin caused the fatal error by matching the error's file path against your active plugins
 * **Instant Deactivation**: Automatically deactivates the problematic plugin during the shutdown phase
+* **Source-Aware Messaging**: Detects whether a fatal error came from a plugin, theme, must-use plugin, drop-in, or WordPress core, and reports the source honestly — it never claims to have resolved an error it could not act on
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
-* **Persistent Error Logging**: Records detailed information about errors in a permanent log for troubleshooting
-* **Error Log Management Page**: Dedicated admin page to view, manage, and clear error logs with detailed history
+* **Persistent Error Logging**: Records every detected fatal error in a permanent log for troubleshooting, even when no plugin could be attributed
+* **Error Log Management Page**: Dedicated admin page with an at-a-glance summary, source labels, and status badges to view, manage, and clear error history
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
 * **Debug-Aware Display**: Shows detailed error information on the front-end error page only when WP_DEBUG is enabled for security; errors are always logged regardless
@@ -34,9 +35,9 @@ This plugin uses WordPress's built-in drop-in system to provide the most reliabl
 1. **Installs a Drop-in**: Creates a `fatal-error-handler.php` file in your wp-content directory
 2. **Monitors for Errors**: WordPress automatically uses this drop-in when fatal errors occur
 3. **Captures Error Details**: Records the error message, file, and line number during the shutdown phase
-4. **Identifies the Plugin**: Analyzes the error stack trace to determine which plugin caused the issue
+4. **Identifies the Plugin**: Matches the error's file path against your active plugins to determine which plugin caused the issue
 5. **Deactivates Safely**: Automatically deactivates only the problematic plugin
-6. **Logs Everything**: Stores detailed error information in a permanent log for troubleshooting
+6. **Logs Everything**: Stores detailed information about every fatal error in a permanent log for troubleshooting
 7. **Notifies Admins**: Displays clear admin notices with error details when you next log in
 8. **Shows User-Friendly Pages**: Displays a custom error page with reload button instead of the white screen of death
 
@@ -90,7 +91,11 @@ The current version is designed for standard WordPress installations. Multisite 
 
 = How does the plugin detect which plugin caused a fatal error? =
 
-The plugin analyzes the error stack trace to identify which plugin file triggered the fatal error, then deactivates only that specific plugin.
+The plugin compares the file path of the fatal error against the directories of your active plugins. When the error originates inside an active plugin's folder, that specific plugin is deactivated. Errors originating outside the plugins directory — such as in a theme, a must-use plugin, a drop-in, or WordPress core — are still logged and shown on the custom error page, but nothing is deactivated.
+
+= What happens if the error is not caused by a plugin? =
+
+The plugin determines the source of the error from its file path (theme, must-use plugin, drop-in, or WordPress core) and shows an honest message explaining that the issue could not be resolved automatically and may require manual attention. It will never claim to have fixed an error it could not act on. The error is still recorded in the Fatal Plugin Log, marked as logged only.
 
 = Will this plugin prevent all types of errors? =
 
@@ -117,9 +122,17 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 1. Fatal error detected. Problematic plugin auto-deactivated (requires WP_DEBUG true).
 2. Fatal error detected. Problematic plugin auto-deactivated (WP_DEBUG is false).
 3. Admin notification showing a deactivated plugin and error details
-2. Plugin causing fatal error was auto-deactivated for site safety.
+4. Plugin causing fatal error was auto-deactivated for site safety.
 
 == Changelog ==
+
+= 1.2.0 - 13/06/2026 =
+- Added: Source-aware error messages that detect whether a fatal error came from a plugin, theme, must-use plugin, drop-in, or WordPress core
+- Added: "Source" column, summary cards, and status badges on the Fatal Plugin Log page
+- Changed: Every detected fatal error is now recorded in the permanent log, including errors that could not be attributed to a plugin
+- Changed: The custom error page no longer claims an issue was resolved when no plugin was deactivated
+- Improved: The fatal error handler now catches any Throwable to avoid breaking the shutdown phase
+- Few minor bug fixes & improvements
 
 = 1.1.0 - 01/06/2025 =
 - Added: New "Fatal Plugin Log" admin subpage under Tools for comprehensive error management
@@ -141,6 +154,9 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 - Initial release
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+This update logs every fatal error, detects its source (plugin, theme, drop-in, or core), and shows honest, source-aware messages. Recommended for all users.
 
 = 1.1.0 =
 We have added a dedicated admin subpage for viewing and managing error logs. Please update to the latest version.
