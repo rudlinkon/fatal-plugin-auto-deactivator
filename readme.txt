@@ -24,7 +24,7 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 * **Error Log Management Page**: Dedicated admin page to view, manage, and clear error logs with detailed history
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
-* **Debug-Aware Display**: Shows detailed error information only when WP_DEBUG_DISPLAY is enabled for security
+* **Debug-Aware Display**: Shows detailed error information on the front-end error page only when WP_DEBUG is enabled for security; errors are always logged regardless
 * **Drop-in Management**: Automatically installs and manages WordPress fatal-error-handler.php drop-in
 
 ### How It Works
@@ -106,7 +106,7 @@ WordPress allows only one `fatal-error-handler.php` drop-in at a time. While thi
 
 = Why do I see detailed error information sometimes but not others? =
 
-For security reasons, detailed error information (file paths, line numbers, error messages) is only displayed when WP_DEBUG_DISPLAY is enabled in your WordPress configuration. When disabled, visitors see a generic error message while administrators still receive detailed notifications in the dashboard.
+For security reasons, detailed error information (file paths, line numbers, error messages) is only displayed on the front-end error page when WP_DEBUG is enabled in your WordPress configuration. When disabled, visitors see a generic error message while administrators still receive detailed notifications in the dashboard. Errors are always written to the PHP error log regardless of the WP_DEBUG setting.
 
 = Where are the error logs stored? =
 

@@ -98,8 +98,9 @@ Instantiated by the drop-in; all WP calls guarded for partial-load context.
 
 | Method | Visibility | Behavior |
 |--------|------------|----------|
-| `handle()` | public | Entry point called by WP core. detect → deactivate → render page. Swallows `Exception` |
+| `handle()` | public | Entry point called by WP core. detect → log → deactivate → render page. Swallows `Throwable` |
 | `detect_error()` | protected | `error_get_last()`; returns the error array only for E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR |
+| `log_error( $error )` | protected | `error_log()` the fatal — always, regardless of `WP_DEBUG` and whether a plugin is attributed |
 | `maybe_deactivate_plugin( $error )` | protected | Prefix-matches `$error['file']` against each active plugin's directory; first match deactivated |
 | `get_active_plugins()` | protected | `get_option( 'active_plugins' )` with manual includes fallback |
 | `deactivate_plugin( $plugin_base, $error )` | protected | `deactivate_plugins()`, `error_log()`, store options; returns info array or null |

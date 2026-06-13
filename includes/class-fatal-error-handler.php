@@ -29,6 +29,9 @@ class FPAD_Fatal_Error_Handler {
 				return;
 			}
 
+			// Always log the fatal error, regardless of WP_DEBUG.
+			$this->log_error( $error );
+
 			// Try to deactivate the problematic plugin
 			$deactivated_plugin = $this->maybe_deactivate_plugin( $error );
 
@@ -37,6 +40,20 @@ class FPAD_Fatal_Error_Handler {
 		} catch ( Throwable $e ) {
 			// Catch any error or exception thrown by the handler and remain silent
 		}
+	}
+
+	/**
+	 * Log the fatal error to the PHP error log.
+	 *
+	 * Always runs regardless of the WP_DEBUG setting and regardless of whether
+	 * the error can be attributed to a plugin. WP_DEBUG only controls whether
+	 * error details are shown on the front-end error page.
+	 *
+	 * @param array $error Error information
+	 */
+	protected function log_error( $error ) {
+		//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log( sprintf( 'Fatal Plugin Auto Deactivator: Fatal error in %1$s on line %2$d: %3$s', $error['file'], $error['line'], $error['message'] ) );
 	}
 
 	/**
