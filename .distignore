@@ -47,3 +47,7 @@ node_modules
 build
 postcss.config.js
 .wordpress-org
+.claude
+CLAUDE.md
+docs
+vendor
