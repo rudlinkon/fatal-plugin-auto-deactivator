@@ -686,6 +686,7 @@ class FPAD_Admin {
 			'deactivated'  => __( 'Deactivated', 'fatal-plugin-auto-deactivator' ),
 			'protected'    => __( 'Protected', 'fatal-plugin-auto-deactivator' ),
 			'log_only'     => __( 'Log only', 'fatal-plugin-auto-deactivator' ),
+			'unavailable'  => __( 'Could not deactivate', 'fatal-plugin-auto-deactivator' ),
 			'logged'       => __( 'Logged only', 'fatal-plugin-auto-deactivator' ),
 			'unattributed' => __( 'Not attributed', 'fatal-plugin-auto-deactivator' ),
 		);
@@ -756,6 +757,8 @@ class FPAD_Admin {
 				return '<span class="fpad-badge fpad-badge-protected">' . esc_html__( 'Protected', 'fatal-plugin-auto-deactivator' ) . '</span>';
 			case 'log_only':
 				return '<span class="fpad-badge fpad-badge-logonly">' . esc_html__( 'Log only', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			case 'unavailable':
+				return '<span class="fpad-badge fpad-badge-protected">' . esc_html__( 'Could not deactivate', 'fatal-plugin-auto-deactivator' ) . '</span>';
 			default:
 				return '<span class="fpad-badge fpad-badge-logged">' . esc_html__( 'Logged only', 'fatal-plugin-auto-deactivator' ) . '</span>';
 		}
