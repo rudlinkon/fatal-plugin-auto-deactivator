@@ -77,16 +77,32 @@ class FPAD_Fatal_Error_Handler {
 	 * @param array $error Error information
 	 */
 	protected function maybe_deactivate_plugin( $error ) {
-		$error_file         = $error['file'];
+		// Normalize separators so prefix matching works on Windows too, mirroring
+		// detect_error_source(); the raw match here previously failed on Windows
+		// paths and on single-file plugins.
+		$error_file         = str_replace( '\\', '/', $error['file'] );
+		$plugin_root        = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
 		$deactivated_plugin = null;
 
 		// Get all active plugins
 		$active_plugins = $this->get_active_plugins();
 
 		foreach ( $active_plugins as $plugin_base ) {
-			$plugin_dir = WP_PLUGIN_DIR . '/' . dirname( $plugin_base );
+			$plugin_dir = dirname( $plugin_base );
 
-			if ( strpos( $error_file, $plugin_dir ) === 0 ) {
+			if ( '.' === $plugin_dir ) {
+				// Single-file plugin (e.g. hello.php): match the file exactly instead
+				// of "WP_PLUGIN_DIR/.", which never matches anything.
+				if ( $error_file === $plugin_root . '/' . $plugin_base ) {
+					$deactivated_plugin = $this->deactivate_plugin( $plugin_base, $error );
+					break;
+				}
+				continue;
+			}
+
+			// Directory plugin: prefix match against the folder. The trailing slash
+			// stops "akismet" from matching a sibling "akismet-pro" directory.
+			if ( 0 === strpos( $error_file, $plugin_root . '/' . $plugin_dir . '/' ) ) {
 				$deactivated_plugin = $this->deactivate_plugin( $plugin_base, $error );
 				break;
 			}
