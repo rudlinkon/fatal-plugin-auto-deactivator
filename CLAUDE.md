@@ -44,7 +44,7 @@ The drop-in file must always exist and reference a valid class file inside this 
 
 ## Versioning and release
 
-Version must be bumped in **three places**: the `Version:` plugin header and `FPAD_VERSION` constant in `fatal-plugin-auto-deactivator.php`, and `Stable tag:` in `readme.txt` (plus a changelog entry there).
+Version must be bumped in **three places**: the `Version:` plugin header and `FPAD_VERSION` constant in `fatal-plugin-auto-deactivator.php`, and `Stable tag:` in `readme.txt` (plus a changelog entry there). Also keep `Tested up to:` (in both the plugin header and `readme.txt`) set to a real, current **WordPress** version — not a PHP version.
 
 - Branches: `dev` for development, `master` for releases.
 - Pushing a git **tag** triggers `.github/workflows/release.yml` → deploys to WordPress.org SVN (10up action; `SVN_USERNAME`/`SVN_PASSWORD` secrets).

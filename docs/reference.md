@@ -6,7 +6,7 @@ Defined in `fatal-plugin-auto-deactivator.php` (all wrapped in `! defined()` gua
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `FPAD_VERSION` | `'1.1.0'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
+| `FPAD_VERSION` | `'1.2.1'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
 | `FPAD_PLUGIN_BASENAME` | `plugin_basename( __FILE__ )` | Used to detect self-updates in `FPAD_Utils::plugin_upgrade_hook()` |
 | `FPAD_PLUGIN_DIR` | `plugin_dir_path( __FILE__ )` | Filesystem path; also defined independently by the drop-in relative to `wp-content/` |
 | `FPAD_PLUGIN_URL` | `plugin_dir_url( __FILE__ )` | Currently unused by code; reserved for assets |
