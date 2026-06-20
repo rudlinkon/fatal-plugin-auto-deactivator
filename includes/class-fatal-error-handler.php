@@ -23,6 +23,13 @@ class FPAD_Fatal_Error_Handler {
 	 */
 	public function handle() {
 		try {
+			// During WordPress's plugin/theme editor syntax check (a loopback "scrape"
+			// request), step aside so core can finish its own validation. Our exit()
+			// would otherwise suppress core's scrape result markers.
+			if ( defined( 'WP_SANDBOX_SCRAPING' ) && WP_SANDBOX_SCRAPING ) {
+				return;
+			}
+
 			// Detect the error
 			$error = $this->detect_error();
 			if ( ! $error ) {
@@ -332,6 +339,13 @@ class FPAD_Fatal_Error_Handler {
 	 * @param array $deactivated_plugin Information about the deactivated plugin
 	 */
 	protected function display_custom_error_page( $error, $deactivated_plugin ) {
+		// If output already started (common in shutdown), don't append a broken page
+		// mid-stream or trigger "headers already sent" warnings — leave the partial
+		// response as-is, mirroring WordPress core's own fatal handler guard.
+		if ( headers_sent() ) {
+			return;
+		}
+
 		// Set the HTTP status code
 		http_response_code( 500 );
 
