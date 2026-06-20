@@ -29,6 +29,7 @@ class FPAD_Admin {
 		add_filter( 'site_status_tests', array( __CLASS__, 'register_site_health_test' ) );
 		add_filter( 'debug_information', array( __CLASS__, 'add_debug_information' ) );
 		add_action( 'admin_post_fpad_export_log', array( __CLASS__, 'export_log' ) );
+		add_action( 'current_screen', array( __CLASS__, 'maybe_suppress_admin_notices' ) );
 	}
 
 	/**
@@ -944,6 +945,23 @@ class FPAD_Admin {
 		echo esc_html( self::protection_message( $status ) );
 		echo ' <a href="' . esc_url( self::reinstall_url() ) . '" class="button button-secondary">' . esc_html__( 'Reinstall protection', 'fatal-plugin-auto-deactivator' ) . '</a>';
 		echo '</p></div>';
+	}
+
+	/**
+	 * Keep the Fatal Plugin Log screen focused by removing other plugins'/core
+	 * admin notices there. Our own protection banner and action feedback render
+	 * inline in the page body, so they are unaffected.
+	 *
+	 * @param WP_Screen $screen Current admin screen.
+	 */
+	public static function maybe_suppress_admin_notices( $screen ) {
+		if ( ! $screen || 'tools_page_fpad-log' !== $screen->id ) {
+			return;
+		}
+
+		remove_all_actions( 'admin_notices' );
+		remove_all_actions( 'all_admin_notices' );
+		remove_all_actions( 'user_admin_notices' );
 	}
 
 	/**
