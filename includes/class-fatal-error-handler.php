@@ -425,10 +425,19 @@ class FPAD_Fatal_Error_Handler {
 
 		$now = time();
 
-		// Keep the stored message bounded so a single huge message can't bloat the option.
+		// Keep the stored message bounded so a single huge message can't bloat the
+		// option. Cut on a character boundary so a multibyte UTF-8 sequence isn't split.
 		$message = isset( $error['message'] ) ? (string) $error['message'] : '';
 		if ( strlen( $message ) > 2000 ) {
-			$message = substr( $message, 0, 2000 ) . '…';
+			if ( function_exists( 'mb_substr' ) ) {
+				$message = mb_substr( $message, 0, 2000, 'UTF-8' );
+			} else {
+				$message = substr( $message, 0, 2000 );
+				// Drop a trailing partial multibyte sequence left by the byte-wise cut.
+				$message = preg_replace( '/[\xC0-\xFF][\x80-\xBF]*$/', '', $message );
+				$message = preg_replace( '/[\x80-\xBF]+$/', '', $message );
+			}
+			$message .= '…';
 		}
 
 		// Create a new log entry. The extra context (request URL, PHP/WP version) is
