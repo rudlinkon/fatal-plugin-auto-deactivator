@@ -79,6 +79,16 @@ class FPAD_Dropin_Manager {
 	 * @return bool True on success, false on failure
 	 */
 	public function install_dropin() {
+		// Bail safely if the filesystem could not be initialized (e.g. a host that
+		// requires FTP/SSH credentials). Otherwise the $this->filesystem call below
+		// would fatal on null — defeating the purpose of a crash-prevention plugin.
+		if ( ! $this->filesystem ) {
+			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Fatal Plugin Auto Deactivator: Filesystem unavailable; cannot install the drop-in' );
+
+			return false;
+		}
+
 		// Create the drop-in source file if it doesn't exist
 		if ( ! file_exists( $this->source_path ) ) {
 			$this->create_dropin_source();
@@ -155,7 +165,10 @@ class FPAD_Dropin_Manager {
 			return false;
 		}
 
-		// Create the drop-in source file
+		// Create the drop-in source file. This must stay in sync with the committed
+		// includes/fatal-error-handler-dropin.php: derive paths relative to the
+		// drop-in's own location and define QM_DISABLE_ERROR_HANDLER, so a regenerated
+		// drop-in behaves identically to the shipped one.
 		$dropin_content = '<?php
 /**
  * WordPress Fatal Error Handler
@@ -166,12 +179,25 @@ class FPAD_Dropin_Manager {
  * @package Fatal_Plugin_Auto_Deactivator
  */
 
-// Include the fatal error handler class
-if ( ! class_exists( \'FPAD_Fatal_Error_Handler\' ) ) {
-	require_once \'' . FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php\';
+// Define constants needed for WordPress if they are not already defined.
+if ( ! defined( \'ABSPATH\' ) ) {
+	define( \'ABSPATH\', dirname( dirname( __FILE__ ) ) . \'/\' );
 }
 
-// Return an instance of our custom error handler
+// The drop-in lives in wp-content, so the plugin directory is wp-content/plugins/...
+if ( ! defined( \'FPAD_PLUGIN_DIR\' ) ) {
+	define( \'FPAD_PLUGIN_DIR\', dirname( __FILE__ ) . \'/plugins/fatal-plugin-auto-deactivator/\' );
+}
+
+// Include the fatal error handler class.
+if ( ! class_exists( \'FPAD_Fatal_Error_Handler\' ) ) {
+	require_once FPAD_PLUGIN_DIR . \'includes/class-fatal-error-handler.php\';
+}
+
+// Avoid a conflict with the Query Monitor error handler.
+define( \'QM_DISABLE_ERROR_HANDLER\', true );
+
+// Return an instance of our custom error handler.
 return new FPAD_Fatal_Error_Handler();
 ';
 
