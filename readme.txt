@@ -3,7 +3,7 @@ Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.3
 Tested up to: 7.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -126,6 +126,15 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 
 == Changelog ==
 
+= 1.2.1 - 20/06/2026 =
+- Fixed: Plugin attribution now normalizes file paths and handles single-file plugins, so Windows and symlinked installs — and single-file plugins like Hello Dolly — are matched correctly instead of silently skipped
+- Fixed: Activation no longer triggers a fatal on hosts that require FTP/SSH filesystem credentials (the drop-in installer now fails gracefully)
+- Fixed: The custom error page now honors WP_DEBUG_DISPLAY (and a new FPAD_SHOW_ERROR_DETAILS override), so technical details are no longer exposed to visitors under the recommended production logging setup (WP_DEBUG on, WP_DEBUG_DISPLAY off)
+- Fixed: The error page no longer emits output when HTTP headers have already been sent, and now steps aside during WordPress's plugin/theme editor syntax checks
+- Fixed: Escaped the deactivated plugin name and version on the error page
+- Fixed: The log viewer's "Source" label now matches the error page for every WordPress drop-in
+- Fixed: Corrected the invalid "Tested up to" header value
+
 = 1.2.0 - 13/06/2026 =
 - Added: Source-aware error messages that detect whether a fatal error came from a plugin, theme, must-use plugin, drop-in, or WordPress core
 - Added: "Source" column, summary cards, and status badges on the Fatal Plugin Log page
@@ -154,6 +163,9 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 - Initial release
 
 == Upgrade Notice ==
+
+= 1.2.1 =
+Reliability and security fixes: correct plugin attribution (Windows/symlinked/single-file plugins), no activation crash on FTP-credentialed hosts, and the error page no longer leaks technical details when WP_DEBUG_DISPLAY is off.
 
 = 1.2.0 =
 This update logs every fatal error, detects its source (plugin, theme, drop-in, or core), and shows honest, source-aware messages. Recommended for all users.
