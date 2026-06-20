@@ -128,6 +128,11 @@ class FPAD_Admin {
 			}
 		}
 
+		// Surface the outcome of a per-entry delete (post-redirect).
+		if ( isset( $_GET['fpad_deleted'] ) ) { //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			add_settings_error( 'fpad_messages', 'fpad_deleted', __( 'Log entry deleted.', 'fatal-plugin-auto-deactivator' ), 'success' );
+		}
+
 		// Determine the active tab.
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'log'; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! in_array( $tab, array( 'log', 'settings' ), true ) ) {
@@ -381,6 +386,7 @@ class FPAD_Admin {
 		echo '<th>' . esc_html__( 'Plugin', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'Status', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '<th>' . esc_html__( 'File', 'fatal-plugin-auto-deactivator' ) . '</th>';
+		echo '<th>' . esc_html__( 'Actions', 'fatal-plugin-auto-deactivator' ) . '</th>';
 		echo '</tr>';
 		echo '</thead>';
 		echo '<tbody>';
@@ -437,15 +443,24 @@ class FPAD_Admin {
 				$meta[] = implode( ' · ', $env );
 			}
 
+			// Actions cell: nonce-protected per-entry delete.
+			$entry_key  = self::entry_key( $entry );
+			$delete_url = wp_nonce_url(
+				admin_url( 'tools.php?page=fpad-log&fpad_action=delete&key=' . rawurlencode( $entry_key ) ),
+				'fpad_delete_' . $entry_key
+			);
+			$actions_cell = '<a href="' . esc_url( $delete_url ) . '" class="fpad-delete" onclick="return confirm(\'' . esc_js( __( 'Delete this log entry?', 'fatal-plugin-auto-deactivator' ) ) . '\');">' . esc_html__( 'Delete', 'fatal-plugin-auto-deactivator' ) . '</a>';
+
 			echo '<tr class="log-entry-row">';
 			echo '<td>' . $date_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $source_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $plugin_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $status_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td class="fpad-file">' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
+			echo '<td>' . $actions_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '</tr>';
 			echo '<tr class="log-entry-row error-row">';
-			echo '<td colspan="5"><strong>' . esc_html( $error_type ) . '</strong><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p>';
+			echo '<td colspan="6"><strong>' . esc_html( $error_type ) . '</strong><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p>';
 			if ( $meta ) {
 				echo '<p class="fpad-meta">' . implode( '<br>', $meta ) . '</p>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
@@ -912,7 +927,7 @@ class FPAD_Admin {
 	 * Handle admin GET actions (currently: reinstall the drop-in).
 	 */
 	public static function handle_admin_actions() {
-		if ( ! isset( $_GET['fpad_action'] ) || 'reinstall' !== $_GET['fpad_action'] ) {
+		if ( ! isset( $_GET['fpad_action'] ) ) {
 			return;
 		}
 
@@ -920,20 +935,64 @@ class FPAD_Admin {
 			return;
 		}
 
-		check_admin_referer( 'fpad_reinstall' );
+		$action = sanitize_key( wp_unslash( $_GET['fpad_action'] ) );
 
-		$manager = new FPAD_Dropin_Manager();
-		$manager->remove_dropin();
-		$installed = $manager->install_dropin();
+		if ( 'reinstall' === $action ) {
+			check_admin_referer( 'fpad_reinstall' );
 
-		wp_safe_redirect(
-			add_query_arg(
-				'fpad_reinstalled',
-				$installed ? '1' : '0',
-				admin_url( 'tools.php?page=fpad-log' )
-			)
+			$manager = new FPAD_Dropin_Manager();
+			$manager->remove_dropin();
+			$installed = $manager->install_dropin();
+
+			wp_safe_redirect(
+				add_query_arg(
+					'fpad_reinstalled',
+					$installed ? '1' : '0',
+					admin_url( 'tools.php?page=fpad-log' )
+				)
+			);
+			exit;
+		}
+
+		if ( 'delete' === $action ) {
+			$key = isset( $_GET['key'] ) ? sanitize_text_field( wp_unslash( $_GET['key'] ) ) : '';
+			check_admin_referer( 'fpad_delete_' . $key );
+
+			$log = get_option( 'fpad_deactivation_log', array() );
+			if ( is_array( $log ) ) {
+				$log = array_values(
+					array_filter(
+						$log,
+						function ( $entry ) use ( $key ) {
+							return self::entry_key( $entry ) !== $key;
+						}
+					)
+				);
+				update_option( 'fpad_deactivation_log', $log );
+			}
+
+			wp_safe_redirect( add_query_arg( 'fpad_deleted', '1', admin_url( 'tools.php?page=fpad-log' ) ) );
+			exit;
+		}
+	}
+
+	/**
+	 * Stable identity key for a log entry, used for per-entry actions.
+	 *
+	 * @param array $entry Log entry.
+	 * @return string
+	 */
+	private static function entry_key( $entry ) {
+		$parts = array(
+			isset( $entry['time'] ) ? $entry['time'] : '',
+			isset( $entry['first_time'] ) ? $entry['first_time'] : '',
+			isset( $entry['error_type'] ) ? $entry['error_type'] : '',
+			isset( $entry['error_file'] ) ? $entry['error_file'] : '',
+			isset( $entry['error_line'] ) ? $entry['error_line'] : '',
+			isset( $entry['error_msg'] ) ? $entry['error_msg'] : '',
 		);
-		exit;
+
+		return md5( implode( '|', $parts ) );
 	}
 
 	/**
