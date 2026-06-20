@@ -380,12 +380,13 @@ class FPAD_Fatal_Error_Handler {
 			$home_url  = home_url();
 		}
 
-		// Prepare plugin information
+		// Prepare plugin information. Name/Version come from plugin headers (author
+		// controlled), so escape them before they reach the HTML.
 		$plugin_info = '';
 		if ( $deactivated_plugin ) {
-			$plugin_name    = $deactivated_plugin['plugin_name'];
-			$plugin_version = $deactivated_plugin['plugin_version'] ? ' v' . $deactivated_plugin['plugin_version'] : '';
-			$plugin_info    = "<p>The plugin <strong>{$plugin_name}{$plugin_version}</strong> has been automatically deactivated to prevent further errors.</p>";
+			$plugin_name    = esc_html( $deactivated_plugin['plugin_name'] );
+			$plugin_version = $deactivated_plugin['plugin_version'] ? ' v' . esc_html( $deactivated_plugin['plugin_version'] ) : '';
+			$plugin_info    = '<p>The plugin <strong>' . $plugin_name . $plugin_version . '</strong> has been automatically deactivated to prevent further errors.</p>';
 		}
 
 		// Tailor the messaging to the detected source of the error and whether we
