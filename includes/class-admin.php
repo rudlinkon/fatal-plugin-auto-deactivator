@@ -365,6 +365,9 @@ class FPAD_Admin {
 				'maintenance.php',
 				'php-error.php',
 				'sunrise.php',
+				'blog-deleted.php',
+				'blog-inactive.php',
+				'blog-suspended.php',
 			);
 			foreach ( $dropins as $dropin ) {
 				if ( $content_dir . '/' . $dropin === $file ) {
