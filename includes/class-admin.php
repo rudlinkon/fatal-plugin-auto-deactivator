@@ -190,6 +190,15 @@ class FPAD_Admin {
 	 */
 	private static function render_log_tab() {
 		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+		if ( ! is_array( $deactivation_log ) ) {
+			$deactivation_log = array();
+		}
+		$total_entries = count( $deactivation_log );
+
+		// Read filters. These only affect the read-only display, so no nonce is needed.
+		$f_source = isset( $_GET['fpad_source'] ) ? sanitize_key( wp_unslash( $_GET['fpad_source'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$f_status = isset( $_GET['fpad_status'] ) ? sanitize_key( wp_unslash( $_GET['fpad_status'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$f_query  = isset( $_GET['fpad_q'] ) ? sanitize_text_field( wp_unslash( $_GET['fpad_q'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		echo '<form method="post">';
 		wp_nonce_field( 'fpad_clear_log', 'fpad_nonce' );
@@ -198,10 +207,31 @@ class FPAD_Admin {
 
 		if ( empty( $deactivation_log ) ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No fatal errors have been logged yet. When a plugin (or other code) triggers a fatal error, it will appear here.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
-		} else {
-			self::render_log_summary( $deactivation_log );
-			self::render_log_table( $deactivation_log );
+
+			return;
 		}
+
+		self::render_filter_bar( $f_source, $f_status, $f_query );
+
+		$filtered = self::filter_log( $deactivation_log, $f_source, $f_status, $f_query );
+
+		if ( empty( $filtered ) ) {
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No log entries match the current filters.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
+
+			return;
+		}
+
+		if ( count( $filtered ) !== $total_entries ) {
+			echo '<p class="description">' . sprintf(
+				/* translators: 1: number of matching incidents, 2: total number of incidents */
+				esc_html__( 'Showing %1$s of %2$s logged incidents.', 'fatal-plugin-auto-deactivator' ),
+				esc_html( number_format_i18n( count( $filtered ) ) ),
+				esc_html( number_format_i18n( $total_entries ) )
+			) . '</p>';
+		}
+
+		self::render_log_summary( $filtered );
+		self::render_log_table( $filtered );
 	}
 
 	/**
@@ -359,10 +389,6 @@ class FPAD_Admin {
 			// Get error type as string
 			$error_type = self::get_error_type_string( $entry['error_type'] );
 
-			// Whether a plugin was actually deactivated. Older log entries predate
-			// this flag, so infer it from the presence of a plugin reference.
-			$deactivated = isset( $entry['deactivated'] ) ? $entry['deactivated'] : ! empty( $entry['plugin'] );
-
 			// Plugin cell: show the plugin name/basename, or a fallback when the
 			// error could not be attributed to a specific plugin.
 			if ( ! empty( $entry['plugin_name'] ) ) {
@@ -375,11 +401,7 @@ class FPAD_Admin {
 			$source       = self::classify_source( isset( $entry['error_file'] ) ? $entry['error_file'] : '' );
 			$source_badge = '<span class="fpad-badge fpad-badge-source">' . esc_html( $source ) . '</span>';
 
-			// Prefer the stored status; infer it for entries written before the field existed.
-			$entry_status = isset( $entry['status'] )
-				? $entry['status']
-				: ( $deactivated ? 'deactivated' : ( ! empty( $entry['plugin'] ) ? 'logged' : 'unattributed' ) );
-			$status_badge = self::status_badge( $entry_status );
+			$status_badge = self::status_badge( self::entry_status( $entry ) );
 
 			$count = isset( $entry['count'] ) ? (int) $entry['count'] : 1;
 			$time  = isset( $entry['time'] ) ? $entry['time'] : 0;
@@ -446,8 +468,20 @@ class FPAD_Admin {
 	 * @return string Human-readable source label.
 	 */
 	private static function classify_source( $file ) {
+		return self::source_label( self::source_key( $file ) );
+	}
+
+	/**
+	 * Canonical source key for an error file path (locale-independent).
+	 *
+	 * Mirrors FPAD_Fatal_Error_Handler::detect_error_source().
+	 *
+	 * @param string $file Absolute path to the file that triggered the error.
+	 * @return string One of: plugin, mu-plugin, theme, drop-in, core, unknown.
+	 */
+	private static function source_key( $file ) {
 		if ( '' === $file ) {
-			return __( 'unknown', 'fatal-plugin-auto-deactivator' );
+			return 'unknown';
 		}
 
 		$file      = str_replace( '\\', '/', $file );
@@ -456,16 +490,16 @@ class FPAD_Admin {
 		};
 
 		if ( defined( 'WPMU_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WPMU_PLUGIN_DIR ) . '/' ) ) {
-			return __( 'mu-plugin', 'fatal-plugin-auto-deactivator' );
+			return 'mu-plugin';
 		}
 
 		if ( defined( 'WP_PLUGIN_DIR' ) && 0 === strpos( $file, $normalize( WP_PLUGIN_DIR ) . '/' ) ) {
-			return __( 'plugin', 'fatal-plugin-auto-deactivator' );
+			return 'plugin';
 		}
 
 		$theme_root = function_exists( 'get_theme_root' ) ? $normalize( get_theme_root() ) : '';
 		if ( '' !== $theme_root && 0 === strpos( $file, $theme_root . '/' ) ) {
-			return __( 'theme', 'fatal-plugin-auto-deactivator' );
+			return 'theme';
 		}
 
 		if ( defined( 'WP_CONTENT_DIR' ) ) {
@@ -485,7 +519,7 @@ class FPAD_Admin {
 			);
 			foreach ( $dropins as $dropin ) {
 				if ( $content_dir . '/' . $dropin === $file ) {
-					return __( 'drop-in', 'fatal-plugin-auto-deactivator' );
+					return 'drop-in';
 				}
 			}
 		}
@@ -493,11 +527,142 @@ class FPAD_Admin {
 		if ( defined( 'ABSPATH' ) ) {
 			$abspath = $normalize( ABSPATH );
 			if ( 0 === strpos( $file, $abspath . '/wp-includes/' ) || 0 === strpos( $file, $abspath . '/wp-admin/' ) ) {
-				return __( 'core', 'fatal-plugin-auto-deactivator' );
+				return 'core';
 			}
 		}
 
-		return __( 'unknown', 'fatal-plugin-auto-deactivator' );
+		return 'unknown';
+	}
+
+	/**
+	 * Translated label for a source key.
+	 *
+	 * @param string $key Source key.
+	 * @return string
+	 */
+	private static function source_label( $key ) {
+		$labels = self::source_labels();
+
+		return isset( $labels[ $key ] ) ? $labels[ $key ] : $labels['unknown'];
+	}
+
+	/**
+	 * Map of source key => translated label.
+	 *
+	 * @return array
+	 */
+	private static function source_labels() {
+		return array(
+			'plugin'    => __( 'plugin', 'fatal-plugin-auto-deactivator' ),
+			'mu-plugin' => __( 'mu-plugin', 'fatal-plugin-auto-deactivator' ),
+			'theme'     => __( 'theme', 'fatal-plugin-auto-deactivator' ),
+			'drop-in'   => __( 'drop-in', 'fatal-plugin-auto-deactivator' ),
+			'core'      => __( 'core', 'fatal-plugin-auto-deactivator' ),
+			'unknown'   => __( 'unknown', 'fatal-plugin-auto-deactivator' ),
+		);
+	}
+
+	/**
+	 * Canonical status key for a log entry, inferring it for legacy entries.
+	 *
+	 * @param array $entry Log entry.
+	 * @return string
+	 */
+	private static function entry_status( $entry ) {
+		if ( isset( $entry['status'] ) ) {
+			return $entry['status'];
+		}
+
+		$deactivated = isset( $entry['deactivated'] ) ? $entry['deactivated'] : ! empty( $entry['plugin'] );
+
+		return $deactivated ? 'deactivated' : ( ! empty( $entry['plugin'] ) ? 'logged' : 'unattributed' );
+	}
+
+	/**
+	 * Filter log entries by source, status, and free-text search.
+	 *
+	 * @param array  $log    The full log.
+	 * @param string $source Source key, or '' for all.
+	 * @param string $status Status key, or '' for all.
+	 * @param string $query  Free-text query, or '' for none.
+	 * @return array
+	 */
+	private static function filter_log( $log, $source, $status, $query ) {
+		if ( '' === $source && '' === $status && '' === $query ) {
+			return $log;
+		}
+
+		$query_lc = '' !== $query ? strtolower( $query ) : '';
+		$out      = array();
+
+		foreach ( $log as $entry ) {
+			if ( '' !== $source && self::source_key( isset( $entry['error_file'] ) ? $entry['error_file'] : '' ) !== $source ) {
+				continue;
+			}
+
+			if ( '' !== $status && self::entry_status( $entry ) !== $status ) {
+				continue;
+			}
+
+			if ( '' !== $query_lc ) {
+				$haystack = strtolower(
+					( isset( $entry['plugin_name'] ) ? $entry['plugin_name'] : '' ) . ' ' .
+					( isset( $entry['plugin'] ) ? $entry['plugin'] : '' ) . ' ' .
+					( isset( $entry['error_msg'] ) ? $entry['error_msg'] : '' ) . ' ' .
+					( isset( $entry['error_file'] ) ? $entry['error_file'] : '' )
+				);
+				if ( false === strpos( $haystack, $query_lc ) ) {
+					continue;
+				}
+			}
+
+			$out[] = $entry;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Render the source/status/search filter bar.
+	 *
+	 * @param string $f_source Selected source key.
+	 * @param string $f_status Selected status key.
+	 * @param string $f_query  Current search query.
+	 */
+	private static function render_filter_bar( $f_source, $f_status, $f_query ) {
+		$sources  = self::source_labels();
+		$statuses = array(
+			'deactivated'  => __( 'Deactivated', 'fatal-plugin-auto-deactivator' ),
+			'protected'    => __( 'Protected', 'fatal-plugin-auto-deactivator' ),
+			'log_only'     => __( 'Log only', 'fatal-plugin-auto-deactivator' ),
+			'logged'       => __( 'Logged only', 'fatal-plugin-auto-deactivator' ),
+			'unattributed' => __( 'Not attributed', 'fatal-plugin-auto-deactivator' ),
+		);
+
+		echo '<form method="get" style="margin:8px 0 12px;">';
+		echo '<input type="hidden" name="page" value="fpad-log">';
+
+		echo '<select name="fpad_source"><option value="">' . esc_html__( 'All sources', 'fatal-plugin-auto-deactivator' ) . '</option>';
+		foreach ( $sources as $key => $label ) {
+			echo '<option value="' . esc_attr( $key ) . '"' . selected( $f_source, $key, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select> ';
+
+		echo '<select name="fpad_status"><option value="">' . esc_html__( 'All statuses', 'fatal-plugin-auto-deactivator' ) . '</option>';
+		foreach ( $statuses as $key => $label ) {
+			echo '<option value="' . esc_attr( $key ) . '"' . selected( $f_status, $key, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select> ';
+
+		echo '<input type="search" name="fpad_q" value="' . esc_attr( $f_query ) . '" placeholder="' . esc_attr__( 'Search plugin, message, file…', 'fatal-plugin-auto-deactivator' ) . '" class="regular-text"> ';
+
+		submit_button( __( 'Filter', 'fatal-plugin-auto-deactivator' ), 'secondary', '', false );
+
+		if ( '' !== $f_source || '' !== $f_status || '' !== $f_query ) {
+			echo ' <a href="' . esc_url( admin_url( 'tools.php?page=fpad-log' ) ) . '" class="button-link">' . esc_html__( 'Clear filters', 'fatal-plugin-auto-deactivator' ) . '</a>';
+		}
+
+		echo '</form>';
 	}
 
 	/**
