@@ -28,6 +28,7 @@ class FPAD_Admin {
 		add_filter( 'plugin_action_links_' . FPAD_PLUGIN_BASENAME, array( __CLASS__, 'add_plugin_action_links' ) );
 		add_filter( 'site_status_tests', array( __CLASS__, 'register_site_health_test' ) );
 		add_filter( 'debug_information', array( __CLASS__, 'add_debug_information' ) );
+		add_action( 'admin_post_fpad_export_log', array( __CLASS__, 'export_log' ) );
 	}
 
 	/**
@@ -215,6 +216,14 @@ class FPAD_Admin {
 
 			return;
 		}
+
+		// Export the full log (not the filtered view).
+		$export_csv  = wp_nonce_url( admin_url( 'admin-post.php?action=fpad_export_log&format=csv' ), 'fpad_export_log' );
+		$export_json = wp_nonce_url( admin_url( 'admin-post.php?action=fpad_export_log&format=json' ), 'fpad_export_log' );
+		echo '<p>';
+		echo '<a href="' . esc_url( $export_csv ) . '" class="button">' . esc_html__( 'Export CSV', 'fatal-plugin-auto-deactivator' ) . '</a> ';
+		echo '<a href="' . esc_url( $export_json ) . '" class="button">' . esc_html__( 'Export JSON', 'fatal-plugin-auto-deactivator' ) . '</a>';
+		echo '</p>';
 
 		self::render_filter_bar( $f_source, $f_status, $f_query );
 
@@ -443,13 +452,15 @@ class FPAD_Admin {
 				$meta[] = implode( ' · ', $env );
 			}
 
-			// Actions cell: nonce-protected per-entry delete.
+			// Actions cell: copy a bug report, plus a nonce-protected per-entry delete.
 			$entry_key  = self::entry_key( $entry );
 			$delete_url = wp_nonce_url(
 				admin_url( 'tools.php?page=fpad-log&fpad_action=delete&key=' . rawurlencode( $entry_key ) ),
 				'fpad_delete_' . $entry_key
 			);
-			$actions_cell = '<a href="' . esc_url( $delete_url ) . '" class="fpad-delete" onclick="return confirm(\'' . esc_js( __( 'Delete this log entry?', 'fatal-plugin-auto-deactivator' ) ) . '\');">' . esc_html__( 'Delete', 'fatal-plugin-auto-deactivator' ) . '</a>';
+			$copy_button  = '<button type="button" class="button-link fpad-copy" data-fpad-done="' . esc_attr__( 'Copied', 'fatal-plugin-auto-deactivator' ) . '" data-fpad-report="' . esc_attr( self::build_report( $entry ) ) . '">' . esc_html__( 'Copy', 'fatal-plugin-auto-deactivator' ) . '</button>';
+			$delete_link  = '<a href="' . esc_url( $delete_url ) . '" class="fpad-delete" onclick="return confirm(\'' . esc_js( __( 'Delete this log entry?', 'fatal-plugin-auto-deactivator' ) ) . '\');">' . esc_html__( 'Delete', 'fatal-plugin-auto-deactivator' ) . '</a>';
+			$actions_cell = $copy_button . ' ' . $delete_link;
 
 			echo '<tr class="log-entry-row">';
 			echo '<td>' . $date_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -470,6 +481,31 @@ class FPAD_Admin {
 
 		echo '</tbody>';
 		echo '</table>';
+
+		// One delegated handler copies a row's bug report to the clipboard.
+		echo '<script>
+		document.addEventListener( "click", function ( e ) {
+			var btn = e.target.closest ? e.target.closest( ".fpad-copy" ) : null;
+			if ( ! btn ) { return; }
+			var text = btn.getAttribute( "data-fpad-report" ) || "";
+			var done = function () {
+				var original = btn.textContent;
+				btn.textContent = btn.getAttribute( "data-fpad-done" ) || "Copied";
+				setTimeout( function () { btn.textContent = original; }, 1500 );
+			};
+			if ( navigator.clipboard && navigator.clipboard.writeText ) {
+				navigator.clipboard.writeText( text ).then( done );
+			} else {
+				var ta = document.createElement( "textarea" );
+				ta.value = text;
+				document.body.appendChild( ta );
+				ta.select();
+				try { document.execCommand( "copy" ); } catch ( err ) {}
+				document.body.removeChild( ta );
+				done();
+			}
+		} );
+		</script>';
 	}
 
 	/**
@@ -993,6 +1029,110 @@ class FPAD_Admin {
 		);
 
 		return md5( implode( '|', $parts ) );
+	}
+
+	/**
+	 * Stream the log as a CSV or JSON download (admin-post handler).
+	 */
+	public static function export_log() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to export the log.', 'fatal-plugin-auto-deactivator' ) );
+		}
+
+		check_admin_referer( 'fpad_export_log' );
+
+		$format = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : 'csv';
+		$log    = get_option( 'fpad_deactivation_log', array() );
+		if ( ! is_array( $log ) ) {
+			$log = array();
+		}
+
+		nocache_headers();
+
+		if ( 'json' === $format ) {
+			header( 'Content-Type: application/json; charset=utf-8' );
+			header( 'Content-Disposition: attachment; filename="fatal-plugin-log.json"' );
+			echo wp_json_encode( $log ); //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			exit;
+		}
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="fatal-plugin-log.csv"' );
+
+		//phpcs:ignore WordPress.WP.AlternativeFunctions
+		$out = fopen( 'php://output', 'w' );
+		//phpcs:ignore WordPress.WP.AlternativeFunctions
+		fputcsv( $out, array( 'date_utc', 'last_seen', 'first_seen', 'count', 'source', 'plugin', 'plugin_name', 'status', 'error_type', 'message', 'file', 'line', 'request_uri', 'php_version', 'wp_version' ) );
+
+		foreach ( $log as $entry ) {
+			//phpcs:ignore WordPress.WP.AlternativeFunctions
+			fputcsv(
+				$out,
+				array(
+					isset( $entry['date'] ) ? $entry['date'] : '',
+					isset( $entry['time'] ) ? gmdate( 'Y-m-d H:i:s', $entry['time'] ) : '',
+					isset( $entry['first_time'] ) ? gmdate( 'Y-m-d H:i:s', $entry['first_time'] ) : '',
+					isset( $entry['count'] ) ? (int) $entry['count'] : 1,
+					self::source_key( isset( $entry['error_file'] ) ? $entry['error_file'] : '' ),
+					isset( $entry['plugin'] ) ? $entry['plugin'] : '',
+					isset( $entry['plugin_name'] ) ? $entry['plugin_name'] : '',
+					self::entry_status( $entry ),
+					isset( $entry['error_type'] ) ? self::get_error_type_string( $entry['error_type'] ) : '',
+					isset( $entry['error_msg'] ) ? $entry['error_msg'] : '',
+					isset( $entry['error_file'] ) ? $entry['error_file'] : '',
+					isset( $entry['error_line'] ) ? $entry['error_line'] : '',
+					isset( $entry['request_uri'] ) ? $entry['request_uri'] : '',
+					isset( $entry['php_version'] ) ? $entry['php_version'] : '',
+					isset( $entry['wp_version'] ) ? $entry['wp_version'] : '',
+				)
+			);
+		}
+
+		//phpcs:ignore WordPress.WP.AlternativeFunctions
+		fclose( $out );
+		exit;
+	}
+
+	/**
+	 * Build a plain-text report for a single entry, for pasting into a support thread.
+	 *
+	 * Intentionally untranslated: it is a developer-facing payload, not UI copy.
+	 *
+	 * @param array $entry Log entry.
+	 * @return string
+	 */
+	private static function build_report( $entry ) {
+		$lines   = array();
+		$lines[] = 'Plugin: ' . ( ! empty( $entry['plugin_name'] ) ? $entry['plugin_name'] : 'n/a' )
+			. ( ! empty( $entry['plugin'] ) ? ' (' . $entry['plugin'] . ')' : '' );
+		$lines[] = 'Status: ' . self::entry_status( $entry );
+		$lines[] = 'Source: ' . self::source_key( isset( $entry['error_file'] ) ? $entry['error_file'] : '' );
+		$lines[] = 'Error: ' . ( isset( $entry['error_type'] ) ? self::get_error_type_string( $entry['error_type'] ) : '' )
+			. ': ' . ( isset( $entry['error_msg'] ) ? $entry['error_msg'] : '' );
+		$lines[] = 'File: ' . ( isset( $entry['error_file'] ) ? $entry['error_file'] : '' )
+			. ':' . ( isset( $entry['error_line'] ) ? $entry['error_line'] : '' );
+
+		if ( ! empty( $entry['request_uri'] ) ) {
+			$lines[] = 'Request: ' . $entry['request_uri'];
+		}
+
+		$env = array();
+		if ( ! empty( $entry['php_version'] ) ) {
+			$env[] = 'PHP ' . $entry['php_version'];
+		}
+		if ( ! empty( $entry['wp_version'] ) ) {
+			$env[] = 'WP ' . $entry['wp_version'];
+		}
+		if ( $env ) {
+			$lines[] = 'Environment: ' . implode( ', ', $env );
+		}
+
+		$count = isset( $entry['count'] ) ? (int) $entry['count'] : 1;
+		if ( $count > 1 ) {
+			$lines[] = 'Occurrences: ' . $count;
+		}
+
+		return implode( "\n", $lines );
 	}
 
 	/**
