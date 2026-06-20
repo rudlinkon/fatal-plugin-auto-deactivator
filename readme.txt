@@ -3,7 +3,7 @@ Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.3
 Tested up to: 7.0
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -19,13 +19,16 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 * **Automatic Error Detection**: Monitors for fatal PHP errors in real-time using WordPress drop-in technology
 * **Smart Plugin Identification**: Identifies which plugin caused the fatal error by matching the error's file path against your active plugins
 * **Instant Deactivation**: Automatically deactivates the problematic plugin during the shutdown phase
+* **Protected Plugins Allowlist**: Mark critical plugins (for example a checkout or payments plugin) that must never be deactivated automatically — the fatal is still logged and reported honestly
+* **Log-Only Mode**: Optionally detect and log fatal errors without ever deactivating a plugin
+* **Protection-Status Visibility**: Admin warning, status banner, and a Site Health test that tell you when the protection drop-in is missing, replaced, or could not be installed — with one-click reinstall
 * **Source-Aware Messaging**: Detects whether a fatal error came from a plugin, theme, must-use plugin, drop-in, or WordPress core, and reports the source honestly — it never claims to have resolved an error it could not act on
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
 * **Persistent Error Logging**: Records every detected fatal error in a permanent log for troubleshooting, even when no plugin could be attributed
 * **Error Log Management Page**: Dedicated admin page with an at-a-glance summary, source labels, and status badges to view, manage, and clear error history
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
-* **Debug-Aware Display**: Shows detailed error information on the front-end error page only when WP_DEBUG is enabled for security; errors are always logged regardless
+* **Debug-Aware Display**: Shows detailed error information on the front-end error page only when WP_DEBUG is on and WP_DEBUG_DISPLAY is not disabled (overridable with FPAD_SHOW_ERROR_DETAILS); errors are always logged regardless
 * **Drop-in Management**: Automatically installs and manages WordPress fatal-error-handler.php drop-in
 
 ### How It Works
@@ -85,6 +88,18 @@ Yes, an admin notice will be displayed in your WordPress dashboard showing which
 
 Yes, you can reactivate the plugin through the normal WordPress plugins page. However, be aware that if the issue hasn't been fixed, the plugin will be deactivated again if it causes another fatal error.
 
+= Can I stop it from deactivating a specific plugin? =
+
+Yes. Go to Tools &rarr; Fatal Plugin Log &rarr; Settings and add the plugin to the "Protected plugins" list. Protected plugins are never deactivated automatically — for example, you may prefer to keep a checkout or payments plugin running and fix it manually rather than have it switched off. The fatal error is still logged and an honest message is shown on the error page.
+
+= Can I turn off automatic deactivation entirely? =
+
+Yes. Enable "Log-only mode" under Tools &rarr; Fatal Plugin Log &rarr; Settings. The plugin will keep detecting and logging fatal errors and showing the custom error page, but it will never deactivate a plugin.
+
+= How do I know the protection is actually working? =
+
+The Fatal Plugin Log page shows a status banner ("Protection active" or a warning), and if the protection drop-in is missing, was replaced by another plugin, or could not be installed (for example because wp-content is not writable), you'll see an admin notice and a Site Health test telling you, with a one-click "Reinstall protection" button.
+
 = Does this work with multisite installations? =
 
 The current version is designed for standard WordPress installations. Multisite support may be added in future updates.
@@ -126,6 +141,15 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 
 == Changelog ==
 
+= 1.3.0 - unreleased =
+- Added: Protected plugins allowlist — choose plugins that must never be deactivated automatically, even if they cause a fatal error (the error is still logged and reported honestly)
+- Added: Log-only mode — detect and log fatal errors without ever deactivating a plugin
+- Added: Settings tab on the Fatal Plugin Log page for the allowlist and log-only mode
+- Added: Protection-status visibility — an admin warning, a status banner, and a Site Health test when the protection drop-in is missing, replaced by another plugin, or could not be installed, with a one-click "Reinstall protection" action
+- Added: A Site Health "debug information" section summarizing protection status, settings, and recent fatals
+- Improved: The log now records a status (Deactivated / Protected / Log only / Logged only) for each fatal
+- Improved: Hardened drop-in ownership checks and the clear-log action
+
 = 1.2.1 - 20/06/2026 =
 - Fixed: Plugin attribution now normalizes file paths and handles single-file plugins, so Windows and symlinked installs — and single-file plugins like Hello Dolly — are matched correctly instead of silently skipped
 - Fixed: Activation no longer triggers a fatal on hosts that require FTP/SSH filesystem credentials (the drop-in installer now fails gracefully)
@@ -163,6 +187,9 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 - Initial release
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+New: protect critical plugins from auto-deactivation, a log-only mode, and clear protection-status warnings (admin notice + Site Health) so you always know your site is covered.
 
 = 1.2.1 =
 Reliability and security fixes: correct plugin attribution (Windows/symlinked/single-file plugins), no activation crash on FTP-credentialed hosts, and the error page no longer leaks technical details when WP_DEBUG_DISPLAY is off.

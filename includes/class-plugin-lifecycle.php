@@ -65,5 +65,6 @@ class FPAD_Plugin_Lifecycle {
 		// Delete plugin options
 		delete_option( 'fpad_deactivated_plugins' );
 		delete_option( 'fpad_deactivation_log' );
+		delete_option( 'fpad_settings' );
 	}
 }

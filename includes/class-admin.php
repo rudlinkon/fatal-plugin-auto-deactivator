@@ -21,9 +21,13 @@ class FPAD_Admin {
 	 * Initialize admin functionality
 	 */
 	public static function init() {
+		add_action( 'admin_init', array( __CLASS__, 'handle_admin_actions' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'display_admin_notices' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_protection_notice' ) );
 		add_action( 'admin_menu', array( __CLASS__, 'add_settings_page' ) );
-		add_filter( 'plugin_action_links_fatal-plugin-auto-deactivator/fatal-plugin-auto-deactivator.php', array( __CLASS__, 'add_plugin_action_links' ) );
+		add_filter( 'plugin_action_links_' . FPAD_PLUGIN_BASENAME, array( __CLASS__, 'add_plugin_action_links' ) );
+		add_filter( 'site_status_tests', array( __CLASS__, 'register_site_health_test' ) );
+		add_filter( 'debug_information', array( __CLASS__, 'add_debug_information' ) );
 	}
 
 	/**
@@ -86,20 +90,25 @@ class FPAD_Admin {
 			return $links;
 		}
 
-		$log_link = sprintf(
-			'<a href="%s">%s</a>',
-			esc_url( admin_url( 'tools.php?page=fpad-log' ) ),
-			esc_html__( 'View Log', 'fatal-plugin-auto-deactivator' )
+		$action_links = array(
+			sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( admin_url( 'tools.php?page=fpad-log&tab=settings' ) ),
+				esc_html__( 'Settings', 'fatal-plugin-auto-deactivator' )
+			),
+			sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( admin_url( 'tools.php?page=fpad-log' ) ),
+				esc_html__( 'View Log', 'fatal-plugin-auto-deactivator' )
+			),
 		);
 
-		// Add the log link at the beginning of the array
-		$links[] = $log_link;
-
-		return $links;
+		// Show our links first.
+		return array_merge( $action_links, $links );
 	}
 
 	/**
-	 * Render the log page
+	 * Render the admin page (Log and Settings tabs).
 	 */
 	public static function render_log_page() {
 		// Check user capabilities
@@ -107,38 +116,92 @@ class FPAD_Admin {
 			return;
 		}
 
-		// Handle log clearing
-		//phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		if ( isset( $_POST['fpad_clear_log'] ) && isset( $_POST['fpad_nonce'] ) && wp_verify_nonce( $_POST['fpad_nonce'], 'fpad_clear_log' ) ) {
-			update_option( 'fpad_deactivation_log', array() );
-			add_settings_error( 'fpad_messages', 'fpad_message', __( 'Fatal Plugin Auto Deactivator log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
+		self::handle_settings_save();
+		self::handle_clear_log();
+
+		// Surface the outcome of a "Reinstall protection" action (post-redirect).
+		if ( isset( $_GET['fpad_reinstalled'] ) ) { //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( '1' === $_GET['fpad_reinstalled'] ) { //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				add_settings_error( 'fpad_messages', 'fpad_reinstalled', __( 'Protection reinstalled successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
+			} else {
+				add_settings_error( 'fpad_messages', 'fpad_reinstalled', __( 'Protection could not be reinstalled. Check your wp-content directory permissions.', 'fatal-plugin-auto-deactivator' ), 'error' );
+			}
 		}
 
-		// Get the log
-		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+		// Determine the active tab.
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'log'; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! in_array( $tab, array( 'log', 'settings' ), true ) ) {
+			$tab = 'log';
+		}
 
-		// Start the page
 		echo '<div class="wrap">';
-		echo '<h1>' . esc_html__( 'Fatal Plugin Auto Deactivator Log', 'fatal-plugin-auto-deactivator' ) . '</h1>';
+		echo '<h1>' . esc_html__( 'Fatal Plugin Auto Deactivator', 'fatal-plugin-auto-deactivator' ) . '</h1>';
 
 		// Show any settings errors/messages
 		settings_errors( 'fpad_messages' );
 
-		// Clear log button
+		self::render_protection_banner();
+
+		$tabs = array(
+			'log'      => __( 'Log', 'fatal-plugin-auto-deactivator' ),
+			'settings' => __( 'Settings', 'fatal-plugin-auto-deactivator' ),
+		);
+		echo '<h2 class="nav-tab-wrapper">';
+		foreach ( $tabs as $slug => $label ) {
+			$url = admin_url( 'tools.php?page=fpad-log' . ( 'log' === $slug ? '' : '&tab=' . $slug ) );
+			printf(
+				'<a href="%s" class="nav-tab%s">%s</a>',
+				esc_url( $url ),
+				$slug === $tab ? ' nav-tab-active' : '',
+				esc_html( $label )
+			);
+		}
+		echo '</h2>';
+
+		if ( 'settings' === $tab ) {
+			self::render_settings_tab();
+		} else {
+			self::render_log_tab();
+		}
+
+		echo '</div>';
+	}
+
+	/**
+	 * Handle the "Clear Log" form submission.
+	 */
+	private static function handle_clear_log() {
+		if ( ! isset( $_POST['fpad_clear_log'] ) ) {
+			return;
+		}
+
+		check_admin_referer( 'fpad_clear_log', 'fpad_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		update_option( 'fpad_deactivation_log', array() );
+		add_settings_error( 'fpad_messages', 'fpad_message', __( 'Fatal Plugin Auto Deactivator log cleared successfully.', 'fatal-plugin-auto-deactivator' ), 'success' );
+	}
+
+	/**
+	 * Render the Log tab (summary cards + table + clear button).
+	 */
+	private static function render_log_tab() {
+		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+
 		echo '<form method="post">';
 		wp_nonce_field( 'fpad_clear_log', 'fpad_nonce' );
 		submit_button( __( 'Clear Log', 'fatal-plugin-auto-deactivator' ), 'delete', 'fpad_clear_log', false );
 		echo '</form><br>';
 
-		// Display the log
 		if ( empty( $deactivation_log ) ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No fatal errors have been logged yet. When a plugin (or other code) triggers a fatal error, it will appear here.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
 		} else {
 			self::render_log_summary( $deactivation_log );
 			self::render_log_table( $deactivation_log );
 		}
-
-		echo '</div>';
 	}
 
 	/**
@@ -264,6 +327,8 @@ class FPAD_Admin {
 			}
 			.fpad-badge-deactivated { background: #d5e8d4; color: #1a4d1a; }
 			.fpad-badge-logged { background: #e6e6e6; color: #50575e; }
+			.fpad-badge-protected { background: #fcf0d6; color: #8a6d00; }
+			.fpad-badge-logonly { background: #e5f0fa; color: #135e96; }
 			.fpad-badge-source { background: #e5f0fa; color: #135e96; text-transform: capitalize; }
 		</style>';
 
@@ -299,11 +364,11 @@ class FPAD_Admin {
 			$source       = self::classify_source( isset( $entry['error_file'] ) ? $entry['error_file'] : '' );
 			$source_badge = '<span class="fpad-badge fpad-badge-source">' . esc_html( $source ) . '</span>';
 
-			if ( $deactivated ) {
-				$status_badge = '<span class="fpad-badge fpad-badge-deactivated">' . esc_html__( 'Deactivated', 'fatal-plugin-auto-deactivator' ) . '</span>';
-			} else {
-				$status_badge = '<span class="fpad-badge fpad-badge-logged">' . esc_html__( 'Logged only', 'fatal-plugin-auto-deactivator' ) . '</span>';
-			}
+			// Prefer the stored status; infer it for entries written before the field existed.
+			$entry_status = isset( $entry['status'] )
+				? $entry['status']
+				: ( $deactivated ? 'deactivated' : ( ! empty( $entry['plugin'] ) ? 'logged' : 'unattributed' ) );
+			$status_badge = self::status_badge( $entry_status );
 
 			echo '<tr class="log-entry-row">';
 			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . '<br><small>' . esc_html( wp_date( 'h:i:s a', $entry['time'] ) ) . '</small></td>';
@@ -410,5 +475,348 @@ class FPAD_Admin {
 			default:
 				return 'Unknown';
 		}
+	}
+
+	/**
+	 * Map an outcome status to a coloured table badge.
+	 *
+	 * @param string $status One of: deactivated, protected, log_only, logged, unattributed.
+	 * @return string
+	 */
+	private static function status_badge( $status ) {
+		switch ( $status ) {
+			case 'deactivated':
+				return '<span class="fpad-badge fpad-badge-deactivated">' . esc_html__( 'Deactivated', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			case 'protected':
+				return '<span class="fpad-badge fpad-badge-protected">' . esc_html__( 'Protected', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			case 'log_only':
+				return '<span class="fpad-badge fpad-badge-logonly">' . esc_html__( 'Log only', 'fatal-plugin-auto-deactivator' ) . '</span>';
+			default:
+				return '<span class="fpad-badge fpad-badge-logged">' . esc_html__( 'Logged only', 'fatal-plugin-auto-deactivator' ) . '</span>';
+		}
+	}
+
+	/**
+	 * Read the plugin settings with defaults.
+	 *
+	 * @return array
+	 */
+	private static function get_settings() {
+		$settings = get_option( 'fpad_settings', array() );
+		if ( ! is_array( $settings ) ) {
+			$settings = array();
+		}
+
+		return array(
+			'log_only'          => ! empty( $settings['log_only'] ),
+			'protected_plugins' => ( isset( $settings['protected_plugins'] ) && is_array( $settings['protected_plugins'] ) )
+				? $settings['protected_plugins']
+				: array(),
+		);
+	}
+
+	/**
+	 * Build a basename => display-name map of currently active plugins.
+	 *
+	 * @return array
+	 */
+	private static function get_active_plugin_choices() {
+		$active = get_option( 'active_plugins', array() );
+		if ( ! is_array( $active ) ) {
+			return array();
+		}
+
+		if ( ! function_exists( 'get_plugin_data' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		$choices = array();
+		foreach ( $active as $basename ) {
+			$file = WP_PLUGIN_DIR . '/' . $basename;
+			$name = $basename;
+			if ( file_exists( $file ) ) {
+				$data = get_plugin_data( $file, false, false );
+				if ( ! empty( $data['Name'] ) ) {
+					$name = $data['Name'];
+				}
+			}
+			$choices[ $basename ] = $name;
+		}
+
+		asort( $choices );
+
+		return $choices;
+	}
+
+	/**
+	 * Render the Settings tab (log-only mode + protected-plugins allowlist).
+	 */
+	private static function render_settings_tab() {
+		$settings = self::get_settings();
+		$active   = self::get_active_plugin_choices();
+
+		echo '<form method="post">';
+		wp_nonce_field( 'fpad_save_settings', 'fpad_settings_nonce' );
+
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Automatic deactivation', 'fatal-plugin-auto-deactivator' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="fpad_log_only" value="1"' . checked( $settings['log_only'], true, false ) . '> ';
+		echo esc_html__( 'Log-only mode: detect and log fatal errors, but never deactivate any plugin.', 'fatal-plugin-auto-deactivator' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'Use this if you prefer to investigate fatal errors yourself without plugins being switched off automatically.', 'fatal-plugin-auto-deactivator' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Protected plugins', 'fatal-plugin-auto-deactivator' ) . '</th><td>';
+		if ( empty( $active ) ) {
+			echo '<p>' . esc_html__( 'No active plugins found.', 'fatal-plugin-auto-deactivator' ) . '</p>';
+		} else {
+			echo '<fieldset>';
+			echo '<p class="description">' . esc_html__( 'These plugins will never be deactivated automatically, even if they cause a fatal error. The error is still logged and an honest message is shown.', 'fatal-plugin-auto-deactivator' ) . '</p>';
+			foreach ( $active as $basename => $name ) {
+				echo '<label style="display:block;margin:4px 0;"><input type="checkbox" name="fpad_protected_plugins[]" value="' . esc_attr( $basename ) . '"' . checked( in_array( $basename, $settings['protected_plugins'], true ), true, false ) . '> ' . esc_html( $name ) . '</label>';
+			}
+			echo '</fieldset>';
+		}
+		echo '</td></tr>';
+
+		echo '</tbody></table>';
+		submit_button( __( 'Save Settings', 'fatal-plugin-auto-deactivator' ) );
+		echo '</form>';
+	}
+
+	/**
+	 * Handle the Settings form submission.
+	 */
+	private static function handle_settings_save() {
+		if ( ! isset( $_POST['fpad_settings_nonce'] ) ) {
+			return;
+		}
+
+		check_admin_referer( 'fpad_save_settings', 'fpad_settings_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$log_only = ! empty( $_POST['fpad_log_only'] );
+
+		$protected = array();
+		if ( isset( $_POST['fpad_protected_plugins'] ) && is_array( $_POST['fpad_protected_plugins'] ) ) {
+			$valid     = array_keys( self::get_active_plugin_choices() );
+			$submitted = array_map( 'sanitize_text_field', wp_unslash( $_POST['fpad_protected_plugins'] ) );
+			$protected = array_values( array_intersect( $submitted, $valid ) );
+		}
+
+		update_option(
+			'fpad_settings',
+			array(
+				'log_only'          => $log_only,
+				'protected_plugins' => $protected,
+			)
+		);
+
+		add_settings_error( 'fpad_messages', 'fpad_settings_saved', __( 'Settings saved.', 'fatal-plugin-auto-deactivator' ), 'success' );
+	}
+
+	/**
+	 * Current protection status, via the drop-in manager.
+	 *
+	 * @return string active|foreign|missing|unwritable|no_filesystem
+	 */
+	private static function get_protection_state() {
+		$manager = new FPAD_Dropin_Manager();
+
+		return $manager->get_status();
+	}
+
+	/**
+	 * Human-readable explanation for a non-active protection status.
+	 *
+	 * @param string $status Protection status.
+	 * @return string
+	 */
+	private static function protection_message( $status ) {
+		switch ( $status ) {
+			case 'foreign':
+				return __( 'Another plugin currently owns wp-content/fatal-error-handler.php, so Fatal Plugin Auto Deactivator is not protecting your site.', 'fatal-plugin-auto-deactivator' );
+			case 'unwritable':
+				return __( 'Your wp-content directory is not writable, so the protection file could not be installed. Check file permissions.', 'fatal-plugin-auto-deactivator' );
+			case 'no_filesystem':
+				return __( 'WordPress could not access the filesystem (credentials may be required), so the protection file could not be installed.', 'fatal-plugin-auto-deactivator' );
+			case 'missing':
+				return __( 'The protection file is not installed, so your site is not currently protected.', 'fatal-plugin-auto-deactivator' );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Build a nonce-protected URL that reinstalls the drop-in.
+	 *
+	 * @return string
+	 */
+	private static function reinstall_url() {
+		return wp_nonce_url( admin_url( 'tools.php?page=fpad-log&fpad_action=reinstall' ), 'fpad_reinstall' );
+	}
+
+	/**
+	 * Show a site-wide admin notice when protection is not active.
+	 */
+	public static function maybe_show_protection_notice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$status = self::get_protection_state();
+		if ( 'active' === $status ) {
+			return;
+		}
+
+		echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Fatal Plugin Auto Deactivator', 'fatal-plugin-auto-deactivator' ) . ':</strong> ';
+		echo esc_html( self::protection_message( $status ) );
+		echo ' <a href="' . esc_url( self::reinstall_url() ) . '" class="button button-secondary">' . esc_html__( 'Reinstall protection', 'fatal-plugin-auto-deactivator' ) . '</a>';
+		echo '</p></div>';
+	}
+
+	/**
+	 * Render the protection-status banner at the top of the admin page.
+	 */
+	private static function render_protection_banner() {
+		$status = self::get_protection_state();
+
+		if ( 'active' === $status ) {
+			echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Protection active — the fatal error handler drop-in is installed.', 'fatal-plugin-auto-deactivator' ) . '</p></div>';
+
+			return;
+		}
+
+		echo '<div class="notice notice-error inline"><p>' . esc_html( self::protection_message( $status ) );
+		echo ' <a href="' . esc_url( self::reinstall_url() ) . '" class="button button-secondary">' . esc_html__( 'Reinstall protection', 'fatal-plugin-auto-deactivator' ) . '</a></p></div>';
+	}
+
+	/**
+	 * Handle admin GET actions (currently: reinstall the drop-in).
+	 */
+	public static function handle_admin_actions() {
+		if ( ! isset( $_GET['fpad_action'] ) || 'reinstall' !== $_GET['fpad_action'] ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		check_admin_referer( 'fpad_reinstall' );
+
+		$manager = new FPAD_Dropin_Manager();
+		$manager->remove_dropin();
+		$installed = $manager->install_dropin();
+
+		wp_safe_redirect(
+			add_query_arg(
+				'fpad_reinstalled',
+				$installed ? '1' : '0',
+				admin_url( 'tools.php?page=fpad-log' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Register a Site Health test for protection status.
+	 *
+	 * @param array $tests Existing tests.
+	 * @return array
+	 */
+	public static function register_site_health_test( $tests ) {
+		$tests['direct']['fpad_protection'] = array(
+			'label' => __( 'Fatal error protection', 'fatal-plugin-auto-deactivator' ),
+			'test'  => array( __CLASS__, 'site_health_test' ),
+		);
+
+		return $tests;
+	}
+
+	/**
+	 * Site Health test callback.
+	 *
+	 * @return array
+	 */
+	public static function site_health_test() {
+		$status = self::get_protection_state();
+		$active = ( 'active' === $status );
+
+		$result = array(
+			'label'       => $active
+				? __( 'Fatal error protection is active', 'fatal-plugin-auto-deactivator' )
+				: __( 'Fatal error protection is not active', 'fatal-plugin-auto-deactivator' ),
+			'status'      => $active ? 'good' : 'critical',
+			'badge'       => array(
+				'label' => __( 'Security', 'fatal-plugin-auto-deactivator' ),
+				'color' => $active ? 'green' : 'red',
+			),
+			'description' => '<p>' . esc_html(
+				$active
+					? __( 'The Fatal Plugin Auto Deactivator drop-in is installed and will catch fatal errors.', 'fatal-plugin-auto-deactivator' )
+					: self::protection_message( $status )
+			) . '</p>',
+			'actions'     => '',
+			'test'        => 'fpad_protection',
+		);
+
+		if ( ! $active ) {
+			$result['actions'] = sprintf(
+				'<p><a href="%s">%s</a></p>',
+				esc_url( admin_url( 'tools.php?page=fpad-log' ) ),
+				esc_html__( 'Review protection status', 'fatal-plugin-auto-deactivator' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Add a debug-information section to Site Health.
+	 *
+	 * @param array $info Existing debug information.
+	 * @return array
+	 */
+	public static function add_debug_information( $info ) {
+		$log      = get_option( 'fpad_deactivation_log', array() );
+		$settings = self::get_settings();
+		$status   = self::get_protection_state();
+		$last     = ! empty( $log[0]['time'] ) ? wp_date( 'Y-m-d H:i:s', $log[0]['time'] ) : '—';
+
+		$info['fpad'] = array(
+			'label'  => __( 'Fatal Plugin Auto Deactivator', 'fatal-plugin-auto-deactivator' ),
+			'fields' => array(
+				'version'       => array(
+					'label' => __( 'Version', 'fatal-plugin-auto-deactivator' ),
+					'value' => FPAD_VERSION,
+				),
+				'protection'    => array(
+					'label' => __( 'Protection status', 'fatal-plugin-auto-deactivator' ),
+					'value' => $status,
+				),
+				'log_only'      => array(
+					'label' => __( 'Log-only mode', 'fatal-plugin-auto-deactivator' ),
+					'value' => $settings['log_only'] ? __( 'Yes', 'fatal-plugin-auto-deactivator' ) : __( 'No', 'fatal-plugin-auto-deactivator' ),
+				),
+				'protected'     => array(
+					'label' => __( 'Protected plugins', 'fatal-plugin-auto-deactivator' ),
+					'value' => count( $settings['protected_plugins'] ),
+				),
+				'logged_fatals' => array(
+					'label' => __( 'Logged fatal errors', 'fatal-plugin-auto-deactivator' ),
+					'value' => count( $log ),
+				),
+				'last_fatal'    => array(
+					'label' => __( 'Most recent fatal', 'fatal-plugin-auto-deactivator' ),
+					'value' => $last,
+				),
+			),
+		);
+
+		return $info;
 	}
 }
