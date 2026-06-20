@@ -6,7 +6,7 @@ Defined in `fatal-plugin-auto-deactivator.php` (all wrapped in `! defined()` gua
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `FPAD_VERSION` | `'1.2.1'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
+| `FPAD_VERSION` | `'1.3.0'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
 | `FPAD_PLUGIN_BASENAME` | `plugin_basename( __FILE__ )` | Used to detect self-updates in `FPAD_Utils::plugin_upgrade_hook()` |
 | `FPAD_PLUGIN_DIR` | `plugin_dir_path( __FILE__ )` | Filesystem path; also defined independently by the drop-in relative to `wp-content/` |
 | `FPAD_PLUGIN_URL` | `plugin_dir_url( __FILE__ )` | Currently unused by code; reserved for assets |
@@ -51,6 +51,7 @@ array(
     'plugin'      => 'some-plugin/some-plugin.php', // '' when no plugin was attributed
     'plugin_name' => 'Some Plugin',          // resolved display name; '' when unattributed
     'deactivated' => true,                   // bool: was a plugin actually deactivated?
+    'status'      => 'deactivated',          // deactivated|protected|log_only|unavailable|unattributed (since 1.3.0)
     'error_type'  => E_ERROR,                // int PHP error constant
     'error_msg'   => '...',
     'error_file'  => '/path/to/file.php',
@@ -60,9 +61,20 @@ array(
 )
 ```
 
-For fatals that cannot be attributed to an active plugin (theme/core/mu-plugin), `plugin`/`plugin_name` are empty and `deactivated` is `false` — the admin log page renders these as "Not identified / Logged only". Entries written before this field existed lack `deactivated`; the log page infers it from whether `plugin` is non-empty.
+For fatals that cannot be attributed to an active plugin (theme/core/mu-plugin), `plugin`/`plugin_name` are empty and `deactivated` is `false` — the admin log page renders these as "Not identified / Logged only". Entries written before the `deactivated`/`status` fields existed lack them; the log page infers `deactivated` from whether `plugin` is non-empty, and `status` from `deactivated`.
 
-Both options are deleted in `FPAD_Plugin_Lifecycle::uninstall()`.
+### `fpad_settings` — user settings (since 1.3.0)
+
+```php
+array(
+    'log_only'          => false,                          // bool: detect & log, never deactivate
+    'protected_plugins' => array( 'woocommerce/woocommerce.php' ), // basenames never auto-deactivated
+)
+```
+
+Read in the shutdown handler via the guarded `FPAD_Fatal_Error_Handler::get_settings()` and in the admin via `FPAD_Admin::get_settings()`. Written by the Settings tab (`FPAD_Admin::handle_settings_save()`). A matched plugin that is in `protected_plugins`, or any match while `log_only` is on, is attributed and logged with `status` `protected`/`log_only` but **not** deactivated.
+
+All three options are deleted in `FPAD_Plugin_Lifecycle::uninstall()`.
 
 ## WordPress hooks used
 
@@ -73,9 +85,13 @@ The plugin registers no custom actions/filters of its own (nothing for third par
 | `plugins_loaded` | `FPAD_Utils::load_textdomain` | i18n |
 | `upgrader_process_complete` | `FPAD_Utils::plugin_upgrade_hook` | Refresh drop-in after self-update |
 | `admin_init` | `FPAD_Plugin_Lifecycle::check_dropin` | Self-heal missing drop-in |
+| `admin_init` | `FPAD_Admin::handle_admin_actions` | Handle the nonce-protected "Reinstall protection" action |
 | `admin_notices` | `FPAD_Admin::display_admin_notices` | Show + clear deactivation notices |
+| `admin_notices` | `FPAD_Admin::maybe_show_protection_notice` | Warn (site-wide) when protection is not active |
 | `admin_menu` | `FPAD_Admin::add_settings_page` | Register Tools → Fatal Plugin Log |
-| `plugin_action_links_fatal-plugin-auto-deactivator/fatal-plugin-auto-deactivator.php` | `FPAD_Admin::add_plugin_action_links` | "View Log" link on the Plugins screen |
+| `plugin_action_links_{basename}` | `FPAD_Admin::add_plugin_action_links` | "Settings" + "View Log" links on the Plugins screen |
+| `site_status_tests` | `FPAD_Admin::register_site_health_test` | Site Health test for protection status |
+| `debug_information` | `FPAD_Admin::add_debug_information` | Site Health debug section (status, settings, recent fatals) |
 | `register_activation_hook` | `FPAD_Plugin_Lifecycle::activate` | Install drop-in |
 | `register_deactivation_hook` | `FPAD_Plugin_Lifecycle::deactivate` | Remove drop-in |
 | `register_uninstall_hook` | `FPAD_Plugin_Lifecycle::uninstall` | Remove drop-in + delete options |
@@ -87,11 +103,16 @@ The error handler itself is **not** hook-based — it is invoked by WP core's sh
 | Surface | Location | Capability | Notes |
 |---------|----------|------------|-------|
 | Error notices | All wp-admin pages (`admin_notices`) | `activate_plugins` | One dismissible error notice per queued deactivation; queue cleared after display |
-| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`) | `manage_options` | Table of incidents (date/time, plugin or "Not identified", file:line, type, message, deactivation status) + Clear Log button |
+| Protection warning | All wp-admin pages (`admin_notices`) | `manage_options` | Shown when `FPAD_Dropin_Manager::get_status()` is not `active`; includes a nonce'd "Reinstall protection" button |
+| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), **Log** tab | `manage_options` | Status banner + incident table (date/time, source, plugin, status badge, file:line, message) + Clear Log button |
+| Settings tab | `tools.php?page=fpad-log&tab=settings` | `manage_options` | Log-only toggle + protected-plugins checklist; saved to `fpad_settings` |
 | Clear Log form | POST to the log page | `manage_options` + nonce `fpad_clear_log` (field `fpad_nonce`) | Resets `fpad_deactivation_log` to `array()` |
-| Action link | Plugins screen row | `manage_options` | "View Log" → log page |
+| Save Settings form | POST to the settings tab | `manage_options` + nonce `fpad_save_settings` (field `fpad_settings_nonce`) | Writes `fpad_settings` |
+| Reinstall action | GET `?fpad_action=reinstall` | `manage_options` + nonce `fpad_reinstall` | Removes + reinstalls the drop-in, then redirects |
+| Action links | Plugins screen row | `manage_options` | "Settings" + "View Log" → admin page |
+| Site Health | Status test + Info section | (core-gated) | Reports protection status and recent fatals |
 
-There is no REST API, no AJAX endpoints, no front-end assets, and no settings to store — the only admin interaction is the log page form above.
+There is no REST API and no AJAX endpoints. The only stored settings are in `fpad_settings`; all admin forms use the manual nonce-POST pattern (not the Settings API / `options.php`).
 
 ## Class & method reference
 
@@ -101,32 +122,38 @@ Instantiated by the drop-in; all WP calls guarded for partial-load context.
 
 | Method | Visibility | Behavior |
 |--------|------------|----------|
-| `handle()` | public | Entry point called by WP core. detect → deactivate (if matched) → record in log (always) → render page. Swallows `Throwable` |
+| `handle()` | public | Entry point called by WP core. Bails on `WP_SANDBOX_SCRAPING`. detect → resolve plugin (deactivate / attribute) → record in log (always) → render page. Swallows `Throwable` |
 | `detect_error()` | protected | `error_get_last()`; returns the error array only for E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR |
-| `maybe_deactivate_plugin( $error )` | protected | Prefix-matches `$error['file']` against each active plugin's directory; first match deactivated. Returns info array or null |
+| `match_active_plugin( $error )` | protected | Normalized prefix match of `$error['file']` against each active plugin's directory (single-file plugins matched exactly); returns basename or `''`. No side effects |
+| `maybe_deactivate_plugin( $error )` | protected | Matches, then consults settings: `log_only` or a protected plugin → attribute only; otherwise deactivate. Returns outcome array or null |
+| `get_settings()` | protected | Guarded read of `fpad_settings` → `{ log_only, protected_plugins }`, with defaults |
 | `get_active_plugins()` | protected | `get_option( 'active_plugins' )` with manual includes fallback |
-| `deactivate_plugin( $plugin_base, $error )` | protected | `deactivate_plugins()`, `error_log()`, queue admin notice; returns info array or null |
+| `deactivate_plugin( $plugin_base, $error )` | protected | `deactivate_plugins()`, `error_log()`, queue admin notice; returns outcome array (status `deactivated`) or null |
+| `get_plugin_header( $plugin_base )` | protected | Resolves Name/Version from the plugin header with fallbacks |
+| `build_plugin_result( $plugin_base, $error, $deactivated, $status )` | protected | Builds the outcome array (`plugin_base`, `plugin_name`, `plugin_version`, `error`, `deactivated`, `status`) |
 | `store_deactivated_plugin_info( $plugin_base, $error )` | protected | Appends to the `fpad_deactivated_plugins` admin-notice queue |
-| `add_to_deactivation_log( $error, $deactivated_plugin = null )` | protected | Prepends an entry to `fpad_deactivation_log` (caps at 100) for every fatal; records plugin info + `deactivated` flag when attributed. Guards `get_option`/`update_option` for shutdown context |
-| `display_custom_error_page( $error, $deactivated_plugin )` | protected | Sends HTTP 500, prints self-contained HTML page (detail only if `WP_DEBUG`), `exit` |
+| `add_to_deactivation_log( $error, $plugin_result = null )` | protected | Prepends an entry to `fpad_deactivation_log` (caps at 100) for every fatal; records plugin info + `deactivated`/`status`. Guards `get_option`/`update_option` for shutdown context |
+| `display_custom_error_page( $error, $plugin_result )` | protected | Returns if `headers_sent()`; otherwise sends HTTP 500 and prints a self-contained HTML page (detail gated on `WP_DEBUG`+`WP_DEBUG_DISPLAY`/`FPAD_SHOW_ERROR_DETAILS`; source/status-aware copy), `exit` |
 
 ### `FPAD_Dropin_Manager` (`includes/class-dropin-manager.php`)
 
 | Method | Behavior |
 |--------|----------|
 | `__construct()` | Sets `$dropin_path` (`WP_CONTENT_DIR . '/fatal-error-handler.php'`), `$source_path` (`includes/fatal-error-handler-dropin.php`), inits `WP_Filesystem` |
-| `install_dropin()` | Regenerates source if missing, checks `wp-content` writability, `copy()`s source → drop-in, mirrors permissions |
-| `remove_dropin()` | Deletes the drop-in only if its content contains `FPAD_Fatal_Error_Handler` (ownership check) |
-| `is_dropin_installed()` | File exists **and** contains the ownership marker |
-| `create_dropin_source()` | Recovery: regenerates the drop-in source with an absolute embedded plugin path |
+| `install_dropin()` | Bails if filesystem unavailable; regenerates source if missing, checks `wp-content` writability, `copy()`s source → drop-in, mirrors permissions. Returns bool |
+| `remove_dropin()` | Deletes the drop-in only if owned (`dropin_is_ours()`) |
+| `is_dropin_installed()` | File exists **and** owned |
+| `get_status()` | Returns `active` / `foreign` / `missing` / `unwritable` / `no_filesystem` for admin surfacing |
+| `dropin_is_ours()` / `read_dropin()` | protected | Guarded read + ownership check against `OWNERSHIP_MARKER` |
+| `create_dropin_source()` | Recovery: regenerates a drop-in source matching the committed one (relative path + `QM_DISABLE_ERROR_HANDLER`) |
 
 ### `FPAD_Admin` (`includes/class-admin.php`)
 
-Static. `init()` wires the three admin hooks. `render_log_page()` handles the nonce-checked clear action and renders the log table; `get_error_type_string()` maps error constants to labels.
+Static. `init()` wires the admin hooks (notices, protection notice, menu, action links, admin_init actions, Site Health). `render_log_page()` renders the **Log** and **Settings** tabs and a protection-status banner; `handle_clear_log()`/`handle_settings_save()`/`handle_admin_actions()` process the nonce-protected forms/actions. `get_settings()` reads `fpad_settings`; `get_active_plugin_choices()` lists active plugins for the allowlist; `maybe_show_protection_notice()` warns site-wide; `site_health_test()`/`add_debug_information()` feed Site Health.
 
 ### `FPAD_Plugin_Lifecycle` (`includes/class-plugin-lifecycle.php`)
 
-Static. `activate()` / `deactivate()` / `uninstall()` delegate to `FPAD_Dropin_Manager`; `uninstall()` also deletes both options. `check_dropin()` (on `admin_init`) reinstalls when `is_dropin_installed()` is false.
+Static. `activate()` / `deactivate()` / `uninstall()` delegate to `FPAD_Dropin_Manager`; `uninstall()` also deletes `fpad_deactivated_plugins`, `fpad_deactivation_log`, and `fpad_settings`. `check_dropin()` (on `admin_init`) reinstalls when `is_dropin_installed()` is false.
 
 ### `FPAD_Utils` (`includes/class-utils.php`)
 
