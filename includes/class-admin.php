@@ -210,18 +210,22 @@ class FPAD_Admin {
 	 * @param array $deactivation_log The deactivation log entries
 	 */
 	private static function render_log_summary( $deactivation_log ) {
-		$total        = count( $deactivation_log );
+		$total        = 0;
 		$deactivated  = 0;
 		$unattributed = 0;
 		$latest_time  = 0;
 
 		foreach ( $deactivation_log as $entry ) {
+			// Count occurrences, not rows, so coalesced repeats are reflected honestly.
+			$count           = isset( $entry['count'] ) ? (int) $entry['count'] : 1;
 			$was_deactivated = isset( $entry['deactivated'] ) ? $entry['deactivated'] : ! empty( $entry['plugin'] );
+
+			$total += $count;
 			if ( $was_deactivated ) {
-				$deactivated++;
+				$deactivated += $count;
 			}
 			if ( empty( $entry['plugin'] ) ) {
-				$unattributed++;
+				$unattributed += $count;
 			}
 			if ( ! empty( $entry['time'] ) && $entry['time'] > $latest_time ) {
 				$latest_time = $entry['time'];
@@ -330,6 +334,13 @@ class FPAD_Admin {
 			.fpad-badge-protected { background: #fcf0d6; color: #8a6d00; }
 			.fpad-badge-logonly { background: #e5f0fa; color: #135e96; }
 			.fpad-badge-source { background: #e5f0fa; color: #135e96; text-transform: capitalize; }
+			.fpad-badge-count { background: #ededed; color: #50575e; }
+			.fpad-log-table .fpad-meta {
+				color: #646970;
+				font-size: 12px;
+				margin: 6px 0 0;
+				word-break: break-word;
+			}
 		</style>';
 
 		echo '<table class="widefat fpad-log-table">';
@@ -370,15 +381,53 @@ class FPAD_Admin {
 				: ( $deactivated ? 'deactivated' : ( ! empty( $entry['plugin'] ) ? 'logged' : 'unattributed' ) );
 			$status_badge = self::status_badge( $entry_status );
 
+			$count = isset( $entry['count'] ) ? (int) $entry['count'] : 1;
+			$time  = isset( $entry['time'] ) ? $entry['time'] : 0;
+
+			// Date cell: last-seen timestamp, plus an "×N" badge for coalesced repeats.
+			$date_cell = esc_html( wp_date( 'Y-m-d', $time ) ) . '<br><small>' . esc_html( wp_date( 'h:i:s a', $time ) ) . '</small>';
+			if ( $count > 1 ) {
+				$date_cell .= ' <span class="fpad-badge fpad-badge-count">×' . esc_html( number_format_i18n( $count ) ) . '</span>';
+			}
+
+			// Detail-row meta: occurrence span, request URL, and environment.
+			$meta = array();
+			if ( $count > 1 && isset( $entry['first_time'] ) ) {
+				$meta[] = sprintf(
+					/* translators: 1: occurrence count, 2: first-seen datetime, 3: last-seen datetime */
+					esc_html__( 'Seen %1$s times · first %2$s · last %3$s', 'fatal-plugin-auto-deactivator' ),
+					esc_html( number_format_i18n( $count ) ),
+					esc_html( wp_date( 'Y-m-d H:i', $entry['first_time'] ) ),
+					esc_html( wp_date( 'Y-m-d H:i', $time ) )
+				);
+			}
+			if ( ! empty( $entry['request_uri'] ) ) {
+				$meta[] = esc_html__( 'Request:', 'fatal-plugin-auto-deactivator' ) . ' ' . esc_html( $entry['request_uri'] );
+			}
+			$env = array();
+			if ( ! empty( $entry['php_version'] ) ) {
+				$env[] = 'PHP ' . esc_html( $entry['php_version'] );
+			}
+			if ( ! empty( $entry['wp_version'] ) ) {
+				$env[] = 'WP ' . esc_html( $entry['wp_version'] );
+			}
+			if ( $env ) {
+				$meta[] = implode( ' · ', $env );
+			}
+
 			echo '<tr class="log-entry-row">';
-			echo '<td>' . esc_html( wp_date( 'Y-m-d', $entry['time'] ) ) . '<br><small>' . esc_html( wp_date( 'h:i:s a', $entry['time'] ) ) . '</small></td>';
+			echo '<td>' . $date_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $source_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $plugin_cell . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . $status_badge . '</td>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td class="fpad-file">' . esc_html( $entry['error_file'] ) . ':' . esc_html( $entry['error_line'] ) . '</td>';
 			echo '</tr>';
 			echo '<tr class="log-entry-row error-row">';
-			echo '<td colspan="5"><strong>' . esc_html( $error_type ) . '</strong><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p></td>';
+			echo '<td colspan="5"><strong>' . esc_html( $error_type ) . '</strong><p class="fpad_error_message">' . esc_html( $entry['error_msg'] ) . '</p>';
+			if ( $meta ) {
+				echo '<p class="fpad-meta">' . implode( '<br>', $meta ) . '</p>'; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
+			echo '</td>';
 			echo '</tr>';
 		}
 
