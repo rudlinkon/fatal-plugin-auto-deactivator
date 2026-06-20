@@ -18,6 +18,13 @@ if ( ! defined( 'WPINC' ) ) {
 class FPAD_Dropin_Manager {
 
 	/**
+	 * Marker string used to recognize a drop-in this plugin owns.
+	 *
+	 * @var string
+	 */
+	const OWNERSHIP_MARKER = 'FPAD_Fatal_Error_Handler';
+
+	/**
 	 * The path to the drop-in file in the wp-content directory
 	 *
 	 * @var string
@@ -120,31 +127,66 @@ class FPAD_Dropin_Manager {
 	 * @return bool True on success, false on failure
 	 */
 	public function remove_dropin() {
-		if ( file_exists( $this->dropin_path ) ) {
-			// Check if the drop-in is ours before removing it
-			$content = file_get_contents( $this->dropin_path );
-			if ( strpos( $content, 'FPAD_Fatal_Error_Handler' ) !== false ) {
-				return wp_delete_file( $this->dropin_path );
-			}
+		// Only remove a drop-in we own; never touch a foreign one.
+		if ( file_exists( $this->dropin_path ) && $this->dropin_is_ours() ) {
+			return wp_delete_file( $this->dropin_path );
 		}
 
 		return true;
 	}
 
 	/**
-	 * Check if the drop-in is installed and up-to-date
+	 * Check if our drop-in is installed.
 	 *
-	 * @return bool True if installed and up-to-date, false otherwise
+	 * @return bool True if installed and owned by this plugin, false otherwise
 	 */
 	public function is_dropin_installed() {
-		if ( ! file_exists( $this->dropin_path ) ) {
+		return file_exists( $this->dropin_path ) && $this->dropin_is_ours();
+	}
+
+	/**
+	 * Describe the current protection status, for admin surfacing.
+	 *
+	 * @return string One of: active, foreign, missing, unwritable, no_filesystem.
+	 */
+	public function get_status() {
+		if ( file_exists( $this->dropin_path ) ) {
+			return $this->dropin_is_ours() ? 'active' : 'foreign';
+		}
+
+		if ( ! $this->filesystem ) {
+			return 'no_filesystem';
+		}
+
+		if ( ! $this->filesystem->is_writable( WP_CONTENT_DIR ) ) {
+			return 'unwritable';
+		}
+
+		return 'missing';
+	}
+
+	/**
+	 * Read the installed drop-in's contents, or false when it can't be read.
+	 *
+	 * @return string|false
+	 */
+	protected function read_dropin() {
+		if ( ! file_exists( $this->dropin_path ) || ! is_readable( $this->dropin_path ) ) {
 			return false;
 		}
 
-		// Check if the drop-in is ours
-		$content = file_get_contents( $this->dropin_path );
+		return file_get_contents( $this->dropin_path );
+	}
 
-		return strpos( $content, 'FPAD_Fatal_Error_Handler' ) !== false;
+	/**
+	 * Whether the installed drop-in is one this plugin owns.
+	 *
+	 * @return bool
+	 */
+	protected function dropin_is_ours() {
+		$content = $this->read_dropin();
+
+		return is_string( $content ) && false !== strpos( $content, self::OWNERSHIP_MARKER );
 	}
 
 	/**

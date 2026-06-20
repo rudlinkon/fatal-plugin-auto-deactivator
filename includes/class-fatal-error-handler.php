@@ -36,15 +36,16 @@ class FPAD_Fatal_Error_Handler {
 				return;
 			}
 
-			// Try to deactivate the problematic plugin
-			$deactivated_plugin = $this->maybe_deactivate_plugin( $error );
+			// Decide what to do about the plugin responsible: deactivate it, or just
+			// attribute it when log-only mode or the protected-plugins list applies.
+			$plugin_result = $this->maybe_deactivate_plugin( $error );
 
 			// Always record the fatal error in our log, regardless of WP_DEBUG and
 			// regardless of whether the error could be attributed to a plugin.
-			$this->add_to_deactivation_log( $error, $deactivated_plugin );
+			$this->add_to_deactivation_log( $error, $plugin_result );
 
 			// Display our custom error page
-			$this->display_custom_error_page( $error, $deactivated_plugin );
+			$this->display_custom_error_page( $error, $plugin_result );
 		} catch ( Throwable $e ) {
 			// Catch any error or exception thrown by the handler and remain silent
 		}
@@ -79,30 +80,29 @@ class FPAD_Fatal_Error_Handler {
 	}
 
 	/**
-	 * Try to deactivate the plugin that caused the error
+	 * Find the active plugin whose directory contains the error file.
 	 *
-	 * @param array $error Error information
+	 * Pure matching with no side effects. Returns the plugin basename, or '' when
+	 * the fatal cannot be attributed to an active plugin.
+	 *
+	 * @param array $error Error information.
+	 * @return string Plugin basename, or '' when no active plugin matches.
 	 */
-	protected function maybe_deactivate_plugin( $error ) {
+	protected function match_active_plugin( $error ) {
 		// Normalize separators so prefix matching works on Windows too, mirroring
 		// detect_error_source(); the raw match here previously failed on Windows
 		// paths and on single-file plugins.
-		$error_file         = str_replace( '\\', '/', $error['file'] );
-		$plugin_root        = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
-		$deactivated_plugin = null;
+		$error_file  = str_replace( '\\', '/', $error['file'] );
+		$plugin_root = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
 
-		// Get all active plugins
-		$active_plugins = $this->get_active_plugins();
-
-		foreach ( $active_plugins as $plugin_base ) {
+		foreach ( $this->get_active_plugins() as $plugin_base ) {
 			$plugin_dir = dirname( $plugin_base );
 
 			if ( '.' === $plugin_dir ) {
 				// Single-file plugin (e.g. hello.php): match the file exactly instead
 				// of "WP_PLUGIN_DIR/.", which never matches anything.
 				if ( $error_file === $plugin_root . '/' . $plugin_base ) {
-					$deactivated_plugin = $this->deactivate_plugin( $plugin_base, $error );
-					break;
+					return $plugin_base;
 				}
 				continue;
 			}
@@ -110,12 +110,85 @@ class FPAD_Fatal_Error_Handler {
 			// Directory plugin: prefix match against the folder. The trailing slash
 			// stops "akismet" from matching a sibling "akismet-pro" directory.
 			if ( 0 === strpos( $error_file, $plugin_root . '/' . $plugin_dir . '/' ) ) {
-				$deactivated_plugin = $this->deactivate_plugin( $plugin_base, $error );
-				break;
+				return $plugin_base;
 			}
 		}
 
-		return $deactivated_plugin;
+		return '';
+	}
+
+	/**
+	 * Decide what to do about the plugin responsible for the fatal error.
+	 *
+	 * Honors the user's settings: "log only" mode and the protected-plugins
+	 * allowlist both attribute the fatal without deactivating anything.
+	 *
+	 * @param array $error Error information.
+	 * @return array|null Outcome array (see build_plugin_result()), or null when no
+	 *                    active plugin could be attributed.
+	 */
+	protected function maybe_deactivate_plugin( $error ) {
+		$plugin_base = $this->match_active_plugin( $error );
+
+		if ( '' === $plugin_base ) {
+			return null;
+		}
+
+		$settings = $this->get_settings();
+
+		// Master switch: detect and log, but never deactivate.
+		if ( $settings['log_only'] ) {
+			return $this->build_plugin_result( $plugin_base, $error, false, 'log_only' );
+		}
+
+		// Allowlist: this plugin is too important to drop on a single fatal.
+		if ( in_array( $plugin_base, $settings['protected_plugins'], true ) ) {
+			return $this->build_plugin_result( $plugin_base, $error, false, 'protected' );
+		}
+
+		$result = $this->deactivate_plugin( $plugin_base, $error );
+
+		// deactivate_plugins() may be unavailable in a very early shutdown; still
+		// attribute the fatal so the log and page can report it honestly.
+		if ( null === $result ) {
+			return $this->build_plugin_result( $plugin_base, $error, false, 'unavailable' );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Read the plugin settings in a shutdown-safe, guarded way.
+	 *
+	 * The drop-in only loads this handler class, so settings are read directly here
+	 * rather than depending on the admin layer.
+	 *
+	 * @return array {
+	 *     @type bool  $log_only          Detect and log only; never deactivate.
+	 *     @type array $protected_plugins Plugin basenames that must never be deactivated.
+	 * }
+	 */
+	protected function get_settings() {
+		$defaults = array(
+			'log_only'          => false,
+			'protected_plugins' => array(),
+		);
+
+		if ( ! function_exists( 'get_option' ) ) {
+			return $defaults;
+		}
+
+		$settings = get_option( 'fpad_settings', array() );
+		if ( ! is_array( $settings ) ) {
+			return $defaults;
+		}
+
+		return array(
+			'log_only'          => ! empty( $settings['log_only'] ),
+			'protected_plugins' => ( isset( $settings['protected_plugins'] ) && is_array( $settings['protected_plugins'] ) )
+				? $settings['protected_plugins']
+				: array(),
+		);
 	}
 
 	/**
@@ -229,7 +302,30 @@ class FPAD_Fatal_Error_Handler {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
-		// Get plugin data if possible
+		// Without deactivate_plugins() we cannot act; let the caller attribute the
+		// fatal without deactivating.
+		if ( ! function_exists( 'deactivate_plugins' ) ) {
+			return null;
+		}
+
+		// Deactivate the plugin
+		deactivate_plugins( $plugin_base );
+		//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log( "Fatal Plugin Auto Deactivator: Auto-deactivated plugin: {$plugin_base} due to fatal error in: {$error['file']}" );
+
+		// Store deactivated plugin info for admin notice
+		$this->store_deactivated_plugin_info( $plugin_base, $error );
+
+		return $this->build_plugin_result( $plugin_base, $error, true, 'deactivated' );
+	}
+
+	/**
+	 * Resolve a plugin's display name and version from its header, with fallbacks.
+	 *
+	 * @param string $plugin_base Plugin basename.
+	 * @return array Associative array with at least Name and Version keys.
+	 */
+	protected function get_plugin_header( $plugin_base ) {
 		$plugin_data = array(
 			'Name'        => $plugin_base,
 			'PluginURI'   => '',
@@ -238,32 +334,41 @@ class FPAD_Fatal_Error_Handler {
 			'Author'      => '',
 		);
 
+		if ( ! function_exists( 'get_plugin_data' ) && file_exists( ABSPATH . 'wp-admin/includes/plugin.php' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
 		if ( function_exists( 'get_plugin_data' ) && file_exists( WP_PLUGIN_DIR . '/' . $plugin_base ) ) {
-			$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_base, false, false );
-			if ( empty( $plugin_data['Name'] ) ) {
-				$plugin_data['Name'] = $plugin_base;
+			$data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_base, false, false );
+			if ( empty( $data['Name'] ) ) {
+				$data['Name'] = $plugin_base;
 			}
+			$plugin_data = $data;
 		}
 
-		// Deactivate the plugin
-		if ( function_exists( 'deactivate_plugins' ) ) {
-			deactivate_plugins( $plugin_base );
-			//phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( "Fatal Plugin Auto Deactivator: Auto-deactivated plugin: {$plugin_base} due to fatal error in: {$error['file']}" );
+		return $plugin_data;
+	}
 
-			// Store deactivated plugin info for admin notice
-			$this->store_deactivated_plugin_info( $plugin_base, $error );
+	/**
+	 * Build the outcome array passed to the logger and the error page.
+	 *
+	 * @param string $plugin_base Plugin basename.
+	 * @param array  $error       Error information.
+	 * @param bool   $deactivated Whether the plugin was actually deactivated.
+	 * @param string $status      One of: deactivated, log_only, protected, unavailable.
+	 * @return array
+	 */
+	protected function build_plugin_result( $plugin_base, $error, $deactivated, $status ) {
+		$plugin_data = $this->get_plugin_header( $plugin_base );
 
-			// Return plugin information
-			return array(
-				'plugin_base'    => $plugin_base,
-				'plugin_name'    => $plugin_data['Name'],
-				'plugin_version' => $plugin_data['Version'],
-				'error'          => $error
-			);
-		}
-
-		return null;
+		return array(
+			'plugin_base'    => $plugin_base,
+			'plugin_name'    => $plugin_data['Name'],
+			'plugin_version' => $plugin_data['Version'],
+			'error'          => $error,
+			'deactivated'    => (bool) $deactivated,
+			'status'         => $status,
+		);
 	}
 
 	/**
@@ -294,10 +399,10 @@ class FPAD_Fatal_Error_Handler {
 	 * the Fatal Plugin Log page, whether or not a plugin could be attributed and
 	 * deactivated.
 	 *
-	 * @param array      $error              Error information
-	 * @param array|null $deactivated_plugin Info about the deactivated plugin, or null if none was identified
+	 * @param array      $error         Error information
+	 * @param array|null $plugin_result Outcome from maybe_deactivate_plugin(), or null if no plugin was identified
 	 */
-	protected function add_to_deactivation_log( $error, $deactivated_plugin = null ) {
+	protected function add_to_deactivation_log( $error, $plugin_result = null ) {
 		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
 			return;
 		}
@@ -305,15 +410,18 @@ class FPAD_Fatal_Error_Handler {
 		// Get the current log
 		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
 
-		// Resolve plugin details from the deactivation result, if any.
-		$plugin_base = $deactivated_plugin ? $deactivated_plugin['plugin_base'] : '';
-		$plugin_name = $deactivated_plugin ? $deactivated_plugin['plugin_name'] : '';
+		// Resolve plugin details and outcome from the result, if any.
+		$plugin_base = $plugin_result ? $plugin_result['plugin_base'] : '';
+		$plugin_name = $plugin_result ? $plugin_result['plugin_name'] : '';
+		$deactivated = $plugin_result ? ! empty( $plugin_result['deactivated'] ) : false;
+		$status      = $plugin_result ? $plugin_result['status'] : 'unattributed';
 
 		// Create a new log entry
 		$log_entry = array(
 			'plugin'      => $plugin_base,
 			'plugin_name' => $plugin_name,
-			'deactivated' => ! empty( $deactivated_plugin ),
+			'deactivated' => $deactivated,
+			'status'      => $status,
 			'error_type'  => $error['type'],
 			'error_msg'   => $error['message'],
 			'error_file'  => $error['file'],
@@ -335,10 +443,10 @@ class FPAD_Fatal_Error_Handler {
 	/**
 	 * Display a custom error page with warning and reload button
 	 *
-	 * @param array $error Error information
-	 * @param array $deactivated_plugin Information about the deactivated plugin
+	 * @param array      $error         Error information
+	 * @param array|null $plugin_result Outcome from maybe_deactivate_plugin(), or null
 	 */
-	protected function display_custom_error_page( $error, $deactivated_plugin ) {
+	protected function display_custom_error_page( $error, $plugin_result ) {
 		// If output already started (common in shutdown), don't append a broken page
 		// mid-stream or trigger "headers already sent" warnings — leave the partial
 		// response as-is, mirroring WordPress core's own fatal handler guard.
@@ -383,9 +491,9 @@ class FPAD_Fatal_Error_Handler {
 		// Prepare plugin information. Name/Version come from plugin headers (author
 		// controlled), so escape them before they reach the HTML.
 		$plugin_info = '';
-		if ( $deactivated_plugin ) {
-			$plugin_name    = esc_html( $deactivated_plugin['plugin_name'] );
-			$plugin_version = $deactivated_plugin['plugin_version'] ? ' v' . esc_html( $deactivated_plugin['plugin_version'] ) : '';
+		if ( $plugin_result && ! empty( $plugin_result['deactivated'] ) ) {
+			$plugin_name    = esc_html( $plugin_result['plugin_name'] );
+			$plugin_version = $plugin_result['plugin_version'] ? ' v' . esc_html( $plugin_result['plugin_version'] ) : '';
 			$plugin_info    = '<p>The plugin <strong>' . $plugin_name . $plugin_version . '</strong> has been automatically deactivated to prevent further errors.</p>';
 		}
 
@@ -397,10 +505,18 @@ class FPAD_Fatal_Error_Handler {
 
 		switch ( $source ) {
 			case 'plugin':
-				if ( $deactivated_plugin ) {
+				if ( $plugin_result && ! empty( $plugin_result['deactivated'] ) ) {
 					$intro_message   = 'A fatal error was caused by a plugin on your website. The Fatal Plugin Auto Deactivator identified the plugin and automatically deactivated it to resolve the issue.';
 					$generic_message = 'A plugin caused a technical error. The issue has been resolved by automatically deactivating the problematic plugin.';
 					$closing_message = 'You can now safely reload the page to continue browsing the site.';
+				} elseif ( $plugin_result && 'protected' === $plugin_result['status'] ) {
+					$intro_message   = 'A fatal error was caused by a plugin on your website. It is on your protected list, so it was not deactivated automatically and needs manual attention.';
+					$generic_message = 'A plugin caused a technical error. It was not deactivated automatically because it is on your protected list and may require manual attention.';
+					$closing_message = 'You can try reloading the page, but the error may persist until the plugin issue is fixed manually.';
+				} elseif ( $plugin_result && 'log_only' === $plugin_result['status'] ) {
+					$intro_message   = 'A fatal error was caused by a plugin on your website. Automatic deactivation is turned off (log-only mode), so the plugin was recorded but not deactivated and needs manual attention.';
+					$generic_message = 'A plugin caused a technical error. Automatic deactivation is turned off, so it was only logged and may require manual attention.';
+					$closing_message = 'You can try reloading the page, but the error may persist until the plugin issue is fixed manually.';
 				} else {
 					$intro_message   = 'A fatal error appears to have been caused by a plugin, but it could not be deactivated automatically. The plugin may need to be disabled manually.';
 					$generic_message = 'A plugin caused a technical error, but it could not be deactivated automatically and may require manual attention.';
