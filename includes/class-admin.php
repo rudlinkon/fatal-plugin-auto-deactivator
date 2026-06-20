@@ -1032,6 +1032,25 @@ class FPAD_Admin {
 	}
 
 	/**
+	 * Neutralize a CSV cell against spreadsheet formula injection.
+	 *
+	 * Prefixes a leading formula trigger (= + - @, tab, CR) with an apostrophe so
+	 * spreadsheet apps treat the value as text.
+	 *
+	 * @param string $value Raw cell value.
+	 * @return string
+	 */
+	private static function csv_safe( $value ) {
+		$value = (string) $value;
+
+		if ( '' !== $value && in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
+			$value = "'" . $value;
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Stream the log as a CSV or JSON download (admin-post handler).
 	 */
 	public static function export_log() {
@@ -1074,14 +1093,14 @@ class FPAD_Admin {
 					isset( $entry['first_time'] ) ? gmdate( 'Y-m-d H:i:s', $entry['first_time'] ) : '',
 					isset( $entry['count'] ) ? (int) $entry['count'] : 1,
 					self::source_key( isset( $entry['error_file'] ) ? $entry['error_file'] : '' ),
-					isset( $entry['plugin'] ) ? $entry['plugin'] : '',
-					isset( $entry['plugin_name'] ) ? $entry['plugin_name'] : '',
+					self::csv_safe( isset( $entry['plugin'] ) ? $entry['plugin'] : '' ),
+					self::csv_safe( isset( $entry['plugin_name'] ) ? $entry['plugin_name'] : '' ),
 					self::entry_status( $entry ),
 					isset( $entry['error_type'] ) ? self::get_error_type_string( $entry['error_type'] ) : '',
-					isset( $entry['error_msg'] ) ? $entry['error_msg'] : '',
-					isset( $entry['error_file'] ) ? $entry['error_file'] : '',
+					self::csv_safe( isset( $entry['error_msg'] ) ? $entry['error_msg'] : '' ),
+					self::csv_safe( isset( $entry['error_file'] ) ? $entry['error_file'] : '' ),
 					isset( $entry['error_line'] ) ? $entry['error_line'] : '',
-					isset( $entry['request_uri'] ) ? $entry['request_uri'] : '',
+					self::csv_safe( isset( $entry['request_uri'] ) ? $entry['request_uri'] : '' ),
 					isset( $entry['php_version'] ) ? $entry['php_version'] : '',
 					isset( $entry['wp_version'] ) ? $entry['wp_version'] : '',
 				)
