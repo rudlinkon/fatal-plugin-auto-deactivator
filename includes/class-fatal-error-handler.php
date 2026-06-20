@@ -399,6 +399,10 @@ class FPAD_Fatal_Error_Handler {
 	 * the Fatal Plugin Log page, whether or not a plugin could be attributed and
 	 * deactivated.
 	 *
+	 * Identical, repeated fatals are coalesced into a single entry with an
+	 * occurrence count, so one looping error cannot churn the 100-entry cap and
+	 * evict distinct incidents.
+	 *
 	 * @param array      $error         Error information
 	 * @param array|null $plugin_result Outcome from maybe_deactivate_plugin(), or null if no plugin was identified
 	 */
@@ -409,6 +413,9 @@ class FPAD_Fatal_Error_Handler {
 
 		// Get the current log
 		$deactivation_log = get_option( 'fpad_deactivation_log', array() );
+		if ( ! is_array( $deactivation_log ) ) {
+			$deactivation_log = array();
+		}
 
 		// Resolve plugin details and outcome from the result, if any.
 		$plugin_base = $plugin_result ? $plugin_result['plugin_base'] : '';
@@ -416,21 +423,50 @@ class FPAD_Fatal_Error_Handler {
 		$deactivated = $plugin_result ? ! empty( $plugin_result['deactivated'] ) : false;
 		$status      = $plugin_result ? $plugin_result['status'] : 'unattributed';
 
-		// Create a new log entry
+		$now = time();
+
+		// Keep the stored message bounded so a single huge message can't bloat the option.
+		$message = isset( $error['message'] ) ? (string) $error['message'] : '';
+		if ( strlen( $message ) > 2000 ) {
+			$message = substr( $message, 0, 2000 ) . '…';
+		}
+
+		// Create a new log entry. The extra context (request URL, PHP/WP version) is
+		// read from constants/superglobals only, so it stays shutdown-safe.
 		$log_entry = array(
 			'plugin'      => $plugin_base,
 			'plugin_name' => $plugin_name,
 			'deactivated' => $deactivated,
 			'status'      => $status,
 			'error_type'  => $error['type'],
-			'error_msg'   => $error['message'],
+			'error_msg'   => $message,
 			'error_file'  => $error['file'],
 			'error_line'  => $error['line'],
-			'time'        => time(),
+			'time'        => $now,
+			'first_time'  => $now,
+			'count'       => 1,
 			'date'        => gmdate( 'Y-m-d H:i:s' ),
+			'request_uri' => $this->current_request_uri(),
+			'php_version' => PHP_VERSION,
+			'wp_version'  => isset( $GLOBALS['wp_version'] ) ? $GLOBALS['wp_version'] : '',
 		);
 
-		// Add to the log (limit to 100 entries to prevent database bloat)
+		// Coalesce an identical, already-logged fatal instead of inserting a duplicate.
+		$fingerprint = $this->log_fingerprint( $log_entry );
+		foreach ( $deactivation_log as $index => $existing ) {
+			if ( $this->log_fingerprint( $existing ) === $fingerprint ) {
+				$existing_count          = isset( $existing['count'] ) ? (int) $existing['count'] : 1;
+				$log_entry['count']      = $existing_count + 1;
+				$log_entry['first_time'] = isset( $existing['first_time'] )
+					? $existing['first_time']
+					: ( isset( $existing['time'] ) ? $existing['time'] : $now );
+				unset( $deactivation_log[ $index ] );
+				$deactivation_log = array_values( $deactivation_log );
+				break;
+			}
+		}
+
+		// Add to the log, newest (most recently seen) first; cap to prevent bloat.
 		array_unshift( $deactivation_log, $log_entry );
 		if ( count( $deactivation_log ) > 100 ) {
 			$deactivation_log = array_slice( $deactivation_log, 0, 100 );
@@ -438,6 +474,48 @@ class FPAD_Fatal_Error_Handler {
 
 		// Update the log
 		update_option( 'fpad_deactivation_log', $deactivation_log );
+	}
+
+	/**
+	 * Fingerprint a log entry so identical, repeated fatals can be coalesced.
+	 *
+	 * @param array $entry A log entry (new or existing).
+	 * @return string
+	 */
+	protected function log_fingerprint( $entry ) {
+		$parts = array(
+			isset( $entry['error_type'] ) ? $entry['error_type'] : '',
+			isset( $entry['error_file'] ) ? $entry['error_file'] : '',
+			isset( $entry['error_line'] ) ? $entry['error_line'] : '',
+			isset( $entry['error_msg'] ) ? $entry['error_msg'] : '',
+			isset( $entry['plugin'] ) ? $entry['plugin'] : '',
+			isset( $entry['status'] ) ? $entry['status'] : '',
+		);
+
+		return md5( implode( '|', $parts ) );
+	}
+
+	/**
+	 * Read the current request URI, sanitized and bounded, in a shutdown-safe way.
+	 *
+	 * @return string
+	 */
+	protected function current_request_uri() {
+		if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
+			return '';
+		}
+
+		$uri = (string) $_SERVER['REQUEST_URI'];
+		$uri = function_exists( 'wp_unslash' ) ? wp_unslash( $uri ) : stripslashes( $uri );
+
+		if ( function_exists( 'sanitize_text_field' ) ) {
+			$uri = sanitize_text_field( $uri );
+		} else {
+			// Pure-PHP fallback for the partially-loaded shutdown context.
+			$uri = preg_replace( '/[^\x20-\x7E]/', '', str_replace( array( '<', '>', '"', "'" ), '', $uri ) );
+		}
+
+		return strlen( $uri ) > 255 ? substr( $uri, 0, 255 ) : $uri;
 	}
 
 	/**
