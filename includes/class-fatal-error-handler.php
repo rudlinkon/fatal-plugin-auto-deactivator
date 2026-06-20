@@ -199,7 +199,7 @@ class FPAD_Fatal_Error_Handler {
 	 * checked before the broader ones.
 	 *
 	 * @param array $error Error information.
-	 * @return string One of: plugin, theme, mu-plugin, dropin, core, unknown.
+	 * @return string One of: plugin, theme, mu-plugin, drop-in, core, unknown.
 	 */
 	protected function detect_error_source( $error ) {
 		$file = isset( $error['file'] ) ? $error['file'] : '';
@@ -255,7 +255,7 @@ class FPAD_Fatal_Error_Handler {
 			if ( in_array( $file, array_map( function ( $name ) use ( $content_dir ) {
 				return $content_dir . '/' . $name;
 			}, $dropins ), true ) ) {
-				return 'dropin';
+				return 'drop-in';
 			}
 		}
 
@@ -614,7 +614,7 @@ class FPAD_Fatal_Error_Handler {
 				$closing_message = 'You can try reloading the page, but the error may persist until the must-use plugin is fixed manually.';
 				break;
 
-			case 'dropin':
+			case 'drop-in':
 				$intro_message   = 'A fatal error appears to be related to a WordPress drop-in. Drop-ins cannot be deactivated automatically, so this issue could not be resolved for you.';
 				$generic_message = 'A technical error appears to originate from a drop-in and could not be resolved automatically. It may require manual attention.';
 				$closing_message = 'You can try reloading the page, but the error may persist until the drop-in issue is fixed manually.';
