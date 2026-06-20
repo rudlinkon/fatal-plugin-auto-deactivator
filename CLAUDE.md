@@ -53,6 +53,6 @@ Version must be bumped in **three places**: the `Version:` plugin header and `FP
 
 ## Gotchas
 
-- Detailed error output on the public error page is gated on `WP_DEBUG` in code, though readme.txt says `WP_DEBUG_DISPLAY` — check which is intended before touching either.
+- Detailed error output on the public error page is gated (since 1.2.1) on `WP_DEBUG` **and** `WP_DEBUG_DISPLAY` (detail shows only when `WP_DEBUG` is on and `WP_DEBUG_DISPLAY` is not explicitly `false`); the `FPAD_SHOW_ERROR_DETAILS` constant overrides the gate. Code and readme.txt now agree.
 - There is no `composer.json` tracked; `composer.lock` and `vendor/` (dev tool `eduardovillao/wp-since`) exist only locally and are not part of the distribution.
 - Only errors originating in `wp-content/plugins/<dir>` files are attributed; errors in mu-plugins, themes, or core still show the custom error page but deactivate nothing.

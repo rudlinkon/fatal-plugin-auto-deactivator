@@ -439,6 +439,18 @@ class FPAD_Fatal_Error_Handler {
 				break;
 		}
 
+		// Decide whether to expose technical detail on the public page. Default: only
+		// when WP_DEBUG is on AND on-screen display is not explicitly disabled, so the
+		// recommended production setup (WP_DEBUG=true, WP_DEBUG_DISPLAY=false: log but
+		// don't display) does not leak file paths to visitors. The FPAD_SHOW_ERROR_DETAILS
+		// constant is an explicit override either way.
+		if ( defined( 'FPAD_SHOW_ERROR_DETAILS' ) ) {
+			$show_details = (bool) FPAD_SHOW_ERROR_DETAILS;
+		} else {
+			$show_details = defined( 'WP_DEBUG' ) && WP_DEBUG
+				&& ! ( defined( 'WP_DEBUG_DISPLAY' ) && false === WP_DEBUG_DISPLAY );
+		}
+
 		// Output the error page
 		echo '<!DOCTYPE html>
 		<html lang="en">
@@ -531,7 +543,7 @@ class FPAD_Fatal_Error_Handler {
 				</div>
 				<p>' . esc_html( $intro_message ) . '</p>' .
 		     //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		     ( defined( 'WP_DEBUG' ) && WP_DEBUG ? $plugin_info . '
+		     ( $show_details ? $plugin_info . '
 				<div class="fpad_error_details">
 					<p class="fpad_error_message">' . esc_html( $error['message'] ) . '</p>
 					<p class="fpad_error_location">File: ' . esc_html( $error['file'] ) . ' on line ' . esc_html( $error['line'] ) . '</p>

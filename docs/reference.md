@@ -19,7 +19,7 @@ Defined by the drop-in (`wp-content/fatal-error-handler.php`):
 | `FPAD_PLUGIN_DIR` | Computed as `dirname( __FILE__ ) . '/plugins/fatal-plugin-auto-deactivator/'` |
 | `QM_DISABLE_ERROR_HANDLER` | Disables Query Monitor's error handler to avoid conflict |
 
-Honored external constants: `WP_DEBUG` (gates error detail on the public error page), `WP_DISABLE_FATAL_ERROR_HANDLER` (WP core; if true, the drop-in never runs).
+Honored external constants: `WP_DEBUG` + `WP_DEBUG_DISPLAY` (together gate error detail on the public error page — detail shows only when `WP_DEBUG` is on and `WP_DEBUG_DISPLAY` is not explicitly `false`), `FPAD_SHOW_ERROR_DETAILS` (explicit override of that gate), `WP_SANDBOX_SCRAPING` (WP core; the handler returns early during plugin/theme editor syntax checks), `WP_DISABLE_FATAL_ERROR_HANDLER` (WP core; if true, the drop-in never runs).
 
 ## Database structure
 
