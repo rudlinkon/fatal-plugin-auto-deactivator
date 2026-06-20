@@ -2,23 +2,23 @@
 # This file is distributed under the GPL-2.0+.
 msgid ""
 msgstr ""
-"Project-Id-Version: Fatal Plugin Auto Deactivator 1.3.0\n"
+"Project-Id-Version: Fatal Plugin Auto Deactivator 1.4.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/fatal-plugin-auto-deactivator\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-06-20T14:15:30+00:00\n"
+"POT-Creation-Date: 2026-06-20T17:01:44+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: fatal-plugin-auto-deactivator\n"
 
 #. Plugin Name of the plugin
 #: fatal-plugin-auto-deactivator.php
-#: includes/class-admin.php:138
-#: includes/class-admin.php:675
-#: includes/class-admin.php:791
+#: includes/class-admin.php:145
+#: includes/class-admin.php:944
+#: includes/class-admin.php:1244
 msgid "Fatal Plugin Auto Deactivator"
 msgstr ""
 
@@ -43,239 +43,327 @@ msgid "https://profiles.wordpress.org/rudlinkon/"
 msgstr ""
 
 #. translators: 1: Plugin name, 2: Error message
-#: includes/class-admin.php:56
+#: includes/class-admin.php:58
 #, php-format
 msgid "Fatal Plugin Auto Deactivator has deactivated \"%1$s\" due to a fatal error: %2$s"
 msgstr ""
 
-#: includes/class-admin.php:73
+#: includes/class-admin.php:75
 msgid "Fatal Plugin Auto Deactivator Log"
 msgstr ""
 
-#: includes/class-admin.php:74
+#: includes/class-admin.php:76
 msgid "Fatal Plugin Log"
 msgstr ""
 
-#: includes/class-admin.php:97
-#: includes/class-admin.php:147
+#: includes/class-admin.php:99
+#: includes/class-admin.php:154
 msgid "Settings"
 msgstr ""
 
-#: includes/class-admin.php:102
+#: includes/class-admin.php:104
 msgid "View Log"
 msgstr ""
 
-#: includes/class-admin.php:125
+#: includes/class-admin.php:127
 msgid "Protection reinstalled successfully."
 msgstr ""
 
-#: includes/class-admin.php:127
+#: includes/class-admin.php:129
 msgid "Protection could not be reinstalled. Check your wp-content directory permissions."
 msgstr ""
 
-#: includes/class-admin.php:146
+#: includes/class-admin.php:135
+msgid "Log entry deleted."
+msgstr ""
+
+#: includes/class-admin.php:153
 msgid "Log"
 msgstr ""
 
-#: includes/class-admin.php:185
+#: includes/class-admin.php:192
 msgid "Fatal Plugin Auto Deactivator log cleared successfully."
 msgstr ""
 
-#: includes/class-admin.php:196
+#: includes/class-admin.php:212
 msgid "Clear Log"
 msgstr ""
 
-#: includes/class-admin.php:200
+#: includes/class-admin.php:216
 msgid "No fatal errors have been logged yet. When a plugin (or other code) triggers a fatal error, it will appear here."
 msgstr ""
 
-#: includes/class-admin.php:233
+#: includes/class-admin.php:225
+msgid "Export CSV"
+msgstr ""
+
+#: includes/class-admin.php:226
+msgid "Export JSON"
+msgstr ""
+
+#: includes/class-admin.php:234
+msgid "No log entries match the current filters."
+msgstr ""
+
+#. translators: 1: number of matching incidents, 2: total number of incidents
+#: includes/class-admin.php:242
+#, php-format
+msgid "Showing %1$s of %2$s logged incidents."
+msgstr ""
+
+#: includes/class-admin.php:282
 msgid "Total fatal errors"
 msgstr ""
 
-#: includes/class-admin.php:237
+#: includes/class-admin.php:286
 msgid "Plugins deactivated"
 msgstr ""
 
-#: includes/class-admin.php:241
+#: includes/class-admin.php:290
 msgid "Not attributed to a plugin"
 msgstr ""
 
-#: includes/class-admin.php:245
+#: includes/class-admin.php:294
 msgid "Most recent"
 msgstr ""
 
-#: includes/class-admin.php:338
+#: includes/class-admin.php:394
 msgid "Date"
 msgstr ""
 
-#: includes/class-admin.php:339
+#: includes/class-admin.php:395
 msgid "Source"
 msgstr ""
 
-#: includes/class-admin.php:340
+#: includes/class-admin.php:396
 msgid "Plugin"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:397
 msgid "Status"
 msgstr ""
 
-#: includes/class-admin.php:342
+#: includes/class-admin.php:398
 msgid "File"
 msgstr ""
 
-#: includes/class-admin.php:360
+#: includes/class-admin.php:399
+msgid "Actions"
+msgstr ""
+
+#: includes/class-admin.php:413
 msgid "Not identified"
 msgstr ""
 
-#: includes/class-admin.php:401
-#: includes/class-admin.php:451
-msgid "unknown"
+#. translators: 1: occurrence count, 2: first-seen datetime, 3: last-seen datetime
+#: includes/class-admin.php:436
+#, php-format
+msgid "Seen %1$s times · first %2$s · last %3$s"
 msgstr ""
 
-#: includes/class-admin.php:410
-msgid "mu-plugin"
+#: includes/class-admin.php:443
+msgid "Request:"
 msgstr ""
 
-#: includes/class-admin.php:414
+#: includes/class-admin.php:462
+msgid "Copied"
+msgstr ""
+
+#: includes/class-admin.php:462
+msgid "Copy"
+msgstr ""
+
+#: includes/class-admin.php:463
+msgid "Delete this log entry?"
+msgstr ""
+
+#: includes/class-admin.php:463
+msgid "Delete"
+msgstr ""
+
+#: includes/class-admin.php:608
 msgid "plugin"
 msgstr ""
 
-#: includes/class-admin.php:419
+#: includes/class-admin.php:609
+msgid "mu-plugin"
+msgstr ""
+
+#: includes/class-admin.php:610
 msgid "theme"
 msgstr ""
 
-#: includes/class-admin.php:439
+#: includes/class-admin.php:611
 msgid "drop-in"
 msgstr ""
 
-#: includes/class-admin.php:447
+#: includes/class-admin.php:612
 msgid "core"
 msgstr ""
 
-#: includes/class-admin.php:489
+#: includes/class-admin.php:613
+msgid "unknown"
+msgstr ""
+
+#: includes/class-admin.php:687
+#: includes/class-admin.php:756
 msgid "Deactivated"
 msgstr ""
 
-#: includes/class-admin.php:491
+#: includes/class-admin.php:688
+#: includes/class-admin.php:758
 msgid "Protected"
 msgstr ""
 
-#: includes/class-admin.php:493
+#: includes/class-admin.php:689
+#: includes/class-admin.php:760
 msgid "Log only"
 msgstr ""
 
-#: includes/class-admin.php:495
+#: includes/class-admin.php:690
+#: includes/class-admin.php:762
+msgid "Could not deactivate"
+msgstr ""
+
+#: includes/class-admin.php:691
+#: includes/class-admin.php:764
 msgid "Logged only"
 msgstr ""
 
-#: includes/class-admin.php:563
+#: includes/class-admin.php:692
+msgid "Not attributed"
+msgstr ""
+
+#: includes/class-admin.php:698
+msgid "All sources"
+msgstr ""
+
+#: includes/class-admin.php:704
+msgid "All statuses"
+msgstr ""
+
+#: includes/class-admin.php:710
+msgid "Search plugin, message, file…"
+msgstr ""
+
+#: includes/class-admin.php:712
+msgid "Filter"
+msgstr ""
+
+#: includes/class-admin.php:715
+msgid "Clear filters"
+msgstr ""
+
+#: includes/class-admin.php:832
 msgid "Automatic deactivation"
 msgstr ""
 
-#: includes/class-admin.php:565
+#: includes/class-admin.php:834
 msgid "Log-only mode: detect and log fatal errors, but never deactivate any plugin."
 msgstr ""
 
-#: includes/class-admin.php:566
+#: includes/class-admin.php:835
 msgid "Use this if you prefer to investigate fatal errors yourself without plugins being switched off automatically."
 msgstr ""
 
-#: includes/class-admin.php:569
-#: includes/class-admin.php:806
+#: includes/class-admin.php:838
+#: includes/class-admin.php:1259
 msgid "Protected plugins"
 msgstr ""
 
-#: includes/class-admin.php:571
+#: includes/class-admin.php:840
 msgid "No active plugins found."
 msgstr ""
 
-#: includes/class-admin.php:574
+#: includes/class-admin.php:843
 msgid "These plugins will never be deactivated automatically, even if they cause a fatal error. The error is still logged and an honest message is shown."
 msgstr ""
 
-#: includes/class-admin.php:583
+#: includes/class-admin.php:852
 msgid "Save Settings"
 msgstr ""
 
-#: includes/class-admin.php:618
+#: includes/class-admin.php:887
 msgid "Settings saved."
 msgstr ""
 
-#: includes/class-admin.php:641
+#: includes/class-admin.php:910
 msgid "Another plugin currently owns wp-content/fatal-error-handler.php, so Fatal Plugin Auto Deactivator is not protecting your site."
 msgstr ""
 
-#: includes/class-admin.php:643
+#: includes/class-admin.php:912
 msgid "Your wp-content directory is not writable, so the protection file could not be installed. Check file permissions."
 msgstr ""
 
-#: includes/class-admin.php:645
+#: includes/class-admin.php:914
 msgid "WordPress could not access the filesystem (credentials may be required), so the protection file could not be installed."
 msgstr ""
 
-#: includes/class-admin.php:647
+#: includes/class-admin.php:916
 msgid "The protection file is not installed, so your site is not currently protected."
 msgstr ""
 
-#: includes/class-admin.php:677
-#: includes/class-admin.php:694
+#: includes/class-admin.php:946
+#: includes/class-admin.php:980
 msgid "Reinstall protection"
 msgstr ""
 
-#: includes/class-admin.php:688
+#: includes/class-admin.php:974
 msgid "Protection active — the fatal error handler drop-in is installed."
 msgstr ""
 
-#: includes/class-admin.php:733
+#: includes/class-admin.php:1079
+msgid "You are not allowed to export the log."
+msgstr ""
+
+#: includes/class-admin.php:1186
 msgid "Fatal error protection"
 msgstr ""
 
-#: includes/class-admin.php:751
+#: includes/class-admin.php:1204
 msgid "Fatal error protection is active"
 msgstr ""
 
-#: includes/class-admin.php:752
+#: includes/class-admin.php:1205
 msgid "Fatal error protection is not active"
 msgstr ""
 
-#: includes/class-admin.php:755
+#: includes/class-admin.php:1208
 msgid "Security"
 msgstr ""
 
-#: includes/class-admin.php:760
+#: includes/class-admin.php:1213
 msgid "The Fatal Plugin Auto Deactivator drop-in is installed and will catch fatal errors."
 msgstr ""
 
-#: includes/class-admin.php:771
+#: includes/class-admin.php:1224
 msgid "Review protection status"
 msgstr ""
 
-#: includes/class-admin.php:794
+#: includes/class-admin.php:1247
 msgid "Version"
 msgstr ""
 
-#: includes/class-admin.php:798
+#: includes/class-admin.php:1251
 msgid "Protection status"
 msgstr ""
 
-#: includes/class-admin.php:802
+#: includes/class-admin.php:1255
 msgid "Log-only mode"
 msgstr ""
 
-#: includes/class-admin.php:803
+#: includes/class-admin.php:1256
 msgid "Yes"
 msgstr ""
 
-#: includes/class-admin.php:803
+#: includes/class-admin.php:1256
 msgid "No"
 msgstr ""
 
-#: includes/class-admin.php:810
+#: includes/class-admin.php:1263
 msgid "Logged fatal errors"
 msgstr ""
 
-#: includes/class-admin.php:814
+#: includes/class-admin.php:1267
 msgid "Most recent fatal"
 msgstr ""

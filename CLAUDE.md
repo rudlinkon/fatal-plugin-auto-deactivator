@@ -33,14 +33,14 @@ The drop-in file must always exist and reference a valid class file inside this 
 
 - `FPAD_Fatal_Error_Handler` — error detection, plugin matching/deactivation, logging, custom error page (shutdown context, guarded WP calls only). Deactivation honors `fpad_settings` (log-only mode + protected-plugins allowlist), read via the guarded `get_settings()`; a matched-but-not-deactivated plugin is still attributed and logged with a `status`.
 - `FPAD_Dropin_Manager` — install/remove/verify the drop-in copy in `wp-content/`; `get_status()` reports protection state (`active`/`foreign`/`missing`/`unwritable`/`no_filesystem`). Ownership is matched against the `OWNERSHIP_MARKER` constant.
-- `FPAD_Admin` — admin notices, Tools → "Fatal Plugin Log" page (`tools.php?page=fpad-log`) with **Log** + **Settings** tabs and a protection-status banner, clear-log form (nonce `fpad_clear_log`), settings form (nonce `fpad_save_settings`), nonce'd reinstall action (`fpad_reinstall`), site-wide protection warning notice, Site Health test + debug info, "Settings"/"View Log" plugin action links.
+- `FPAD_Admin` — admin notices, Tools → "Fatal Plugin Log" page (`tools.php?page=fpad-log`) with **Log** + **Settings** tabs and a protection-status banner, clear-log form (nonce `fpad_clear_log`), settings form (nonce `fpad_save_settings`), nonce'd reinstall action (`fpad_reinstall`), site-wide protection warning notice, Site Health test + debug info, "Settings"/"View Log" plugin action links. The log viewer (since 1.4.0) also supports source/status filters + search (GET), per-entry delete (`fpad_delete_{key}` nonce), CSV/JSON export (`admin_post_fpad_export_log`, nonce `fpad_export_log`), and a vanilla-JS copy-to-clipboard bug report. On the log screen it also strips other plugins'/core `admin_notices` via `current_screen` (`maybe_suppress_admin_notices`), keeping only its own inline banner and `settings_errors()` feedback.
 - `FPAD_Plugin_Lifecycle` — activation/deactivation/uninstall hooks + `admin_init` drop-in check.
 - `FPAD_Utils` — textdomain loading + self-update drop-in refresh.
 
 ### Data storage (wp_options only, no custom tables)
 
 - `fpad_deactivated_plugins` — pending admin-notice queue; written only when a plugin is actually deactivated; cleared after notices display.
-- `fpad_deactivation_log` — permanent log, newest first, capped at 100 entries; written for **every** detected fatal (attributed or not). Entries carry `deactivated` (bool) and `status` (`deactivated`/`protected`/`log_only`/`unavailable`/`unattributed`); unattributed fatals have empty `plugin`/`plugin_name`.
+- `fpad_deactivation_log` — permanent log, newest first, capped at 100 entries; written for **every** detected fatal (attributed or not). Entries carry `deactivated` (bool) and `status` (`deactivated`/`protected`/`log_only`/`unavailable`/`unattributed`); unattributed fatals have empty `plugin`/`plugin_name`. Since 1.4.0 identical repeats are coalesced (fingerprint of type|file|line|msg|plugin|status) into one entry with `count` + `first_time`, and entries also store `request_uri`/`php_version`/`wp_version`; `error_msg` is capped at 2000 chars.
 - `fpad_settings` — user settings: `log_only` (bool) and `protected_plugins` (array of basenames never auto-deactivated). Read in the shutdown handler (guarded) and the admin.
 
 All three options are deleted on uninstall.

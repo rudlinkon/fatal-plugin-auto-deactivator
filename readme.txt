@@ -3,7 +3,7 @@ Contributors: rudlinkon
 Tags: fatal error, plugin deactivation, error handling, site protection, crash prevention
 Requires at least: 5.3
 Tested up to: 6.8
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -26,6 +26,8 @@ The Fatal Plugin Auto Deactivator plugin is a powerful tool designed to enhance 
 * **Detailed Admin Notifications**: Provides clear notifications about which plugin was deactivated and why
 * **Persistent Error Logging**: Records every detected fatal error in a permanent log for troubleshooting, even when no plugin could be attributed
 * **Error Log Management Page**: Dedicated admin page with an at-a-glance summary, source labels, and status badges to view, manage, and clear error history
+* **Filter, Search & Export**: Filter the log by source and status, search by plugin/message/file, delete individual entries, and export everything to CSV or JSON — plus one-click copy of a ready-to-paste bug report
+* **Repeat-Aware Logging**: Identical fatals are grouped into one entry with an occurrence count and first/last-seen times, so a looping error can't bury your history; each entry also records the request URL and PHP/WordPress version
 * **Zero Configuration**: Works right out of the box with no setup required
 * **Custom Error Page**: Displays a user-friendly error page with a reload button instead of the white screen of death
 * **Debug-Aware Display**: Shows detailed error information on the front-end error page only when WP_DEBUG is on and WP_DEBUG_DISPLAY is not disabled (overridable with FPAD_SHOW_ERROR_DETAILS); errors are always logged regardless
@@ -100,6 +102,10 @@ Yes. Enable "Log-only mode" under Tools &rarr; Fatal Plugin Log &rarr; Settings.
 
 The Fatal Plugin Log page shows a status banner ("Protection active" or a warning), and if the protection drop-in is missing, was replaced by another plugin, or could not be installed (for example because wp-content is not writable), you'll see an admin notice and a Site Health test telling you, with a one-click "Reinstall protection" button.
 
+= Can I filter, search, or export the error log? =
+
+Yes. The Fatal Plugin Log page lets you filter incidents by source (plugin, theme, must-use plugin, drop-in, core) and by status, search across the plugin name, error message, and file path, delete individual entries, and export the full log to CSV or JSON. Each row also has a "Copy" button that puts a ready-to-paste bug report (error, file, request URL, PHP/WordPress version) on your clipboard. Identical repeated fatals are grouped into a single row with an occurrence count.
+
 = Does this work with multisite installations? =
 
 The current version is designed for standard WordPress installations. Multisite support may be added in future updates.
@@ -140,6 +146,15 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 4. Plugin causing fatal error was auto-deactivated for site safety.
 
 == Changelog ==
+
+= 1.4.0 - 20/06/2026 =
+- Added: Filter the Fatal Plugin Log by source and status, and search across plugin name, error message, and file path
+- Added: Delete individual log entries (in addition to clearing the whole log)
+- Added: Export the log to CSV or JSON, and a per-row "Copy" button that produces a ready-to-paste bug report
+- Added: Identical, repeated fatals are now grouped into a single entry with an occurrence count and first/last-seen times, so one looping error can no longer evict the rest of your history
+- Added: Each log entry now records the request URL and the PHP and WordPress versions for easier reproduction
+- Improved: Stored error messages are bounded in length to keep the log option small
+- Changed: The Fatal Plugin Log screen now hides admin notices from other plugins and WordPress core so it stays focused (the plugin's own protection status and action messages still appear)
 
 = 1.3.0 - 20/06/2026 =
 - Added: Protected plugins allowlist — choose plugins that must never be deactivated automatically, even if they cause a fatal error (the error is still logged and reported honestly)
@@ -187,6 +202,9 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 - Initial release
 
 == Upgrade Notice ==
+
+= 1.4.0 =
+The log viewer gains filtering, search, per-entry delete, CSV/JSON export, and copy-to-clipboard bug reports. Repeated fatals are now grouped with an occurrence count so a looping error can't bury your history.
 
 = 1.3.0 =
 New: protect critical plugins from auto-deactivation, a log-only mode, and clear protection-status warnings (admin notice + Site Health) so you always know your site is covered.

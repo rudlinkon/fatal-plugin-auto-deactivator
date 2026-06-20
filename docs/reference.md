@@ -6,7 +6,7 @@ Defined in `fatal-plugin-auto-deactivator.php` (all wrapped in `! defined()` gua
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `FPAD_VERSION` | `'1.3.0'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
+| `FPAD_VERSION` | `'1.4.0'` | Plugin version (keep in sync with plugin header + readme.txt stable tag) |
 | `FPAD_PLUGIN_BASENAME` | `plugin_basename( __FILE__ )` | Used to detect self-updates in `FPAD_Utils::plugin_upgrade_hook()` |
 | `FPAD_PLUGIN_DIR` | `plugin_dir_path( __FILE__ )` | Filesystem path; also defined independently by the drop-in relative to `wp-content/` |
 | `FPAD_PLUGIN_URL` | `plugin_dir_url( __FILE__ )` | Currently unused by code; reserved for assets |
@@ -56,10 +56,17 @@ array(
     'error_msg'   => '...',
     'error_file'  => '/path/to/file.php',
     'error_line'  => 42,
-    'time'        => 1717171717,             // unix timestamp (used for wp_date display)
+    'time'        => 1717171717,             // unix timestamp of the most recent occurrence (used for wp_date display)
+    'first_time'  => 1717170000,             // unix timestamp of the first occurrence (since 1.4.0)
+    'count'       => 1,                      // occurrences coalesced into this entry (since 1.4.0)
     'date'        => '2025-06-01 12:34:56',  // gmdate('Y-m-d H:i:s'), UTC
+    'request_uri' => '/some/page',           // sanitized REQUEST_URI, bounded to 255 chars (since 1.4.0)
+    'php_version' => '8.1.0',                 // PHP_VERSION at the time of the fatal (since 1.4.0)
+    'wp_version'  => '6.8',                   // $GLOBALS['wp_version'] if available (since 1.4.0)
 )
 ```
+
+Since 1.4.0, identical repeated fatals are **coalesced**: `add_to_deactivation_log()` fingerprints `error_type|error_file|error_line|error_msg|plugin|status` and, on a match, increments `count` and updates `time` instead of inserting a duplicate (keeping `first_time`). `error_msg` is bounded to 2000 chars. The viewer sums `count` for the summary cards and shows `×N` per row. All of this stays shutdown-safe (constants/superglobals + array logic only).
 
 For fatals that cannot be attributed to an active plugin (theme/core/mu-plugin), `plugin`/`plugin_name` are empty and `deactivated` is `false` — the admin log page renders these as "Not identified / Logged only". Entries written before the `deactivated`/`status` fields existed lack them; the log page infers `deactivated` from whether `plugin` is non-empty, and `status` from `deactivated`.
 
@@ -85,7 +92,9 @@ The plugin registers no custom actions/filters of its own (nothing for third par
 | `plugins_loaded` | `FPAD_Utils::load_textdomain` | i18n |
 | `upgrader_process_complete` | `FPAD_Utils::plugin_upgrade_hook` | Refresh drop-in after self-update |
 | `admin_init` | `FPAD_Plugin_Lifecycle::check_dropin` | Self-heal missing drop-in |
-| `admin_init` | `FPAD_Admin::handle_admin_actions` | Handle the nonce-protected "Reinstall protection" action |
+| `admin_init` | `FPAD_Admin::handle_admin_actions` | Handle the nonce-protected "Reinstall protection" and per-entry "delete" actions |
+| `admin_post_fpad_export_log` | `FPAD_Admin::export_log` | Stream the log as a CSV or JSON download (nonce `fpad_export_log`) |
+| `current_screen` | `FPAD_Admin::maybe_suppress_admin_notices` | On the log screen only, `remove_all_actions()` on the notice hooks to hide other plugins'/core notices |
 | `admin_notices` | `FPAD_Admin::display_admin_notices` | Show + clear deactivation notices |
 | `admin_notices` | `FPAD_Admin::maybe_show_protection_notice` | Warn (site-wide) when protection is not active |
 | `admin_menu` | `FPAD_Admin::add_settings_page` | Register Tools → Fatal Plugin Log |
@@ -104,15 +113,19 @@ The error handler itself is **not** hook-based — it is invoked by WP core's sh
 |---------|----------|------------|-------|
 | Error notices | All wp-admin pages (`admin_notices`) | `activate_plugins` | One dismissible error notice per queued deactivation; queue cleared after display |
 | Protection warning | All wp-admin pages (`admin_notices`) | `manage_options` | Shown when `FPAD_Dropin_Manager::get_status()` is not `active`; includes a nonce'd "Reinstall protection" button |
-| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), **Log** tab | `manage_options` | Status banner + incident table (date/time, source, plugin, status badge, file:line, message) + Clear Log button |
+| Log page | **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), **Log** tab | `manage_options` | Status banner + incident table (date/time + `×N`, source, plugin, status badge, file:line, message, request/PHP/WP meta, Actions) + Clear Log button |
 | Settings tab | `tools.php?page=fpad-log&tab=settings` | `manage_options` | Log-only toggle + protected-plugins checklist; saved to `fpad_settings` |
+| Filter bar | GET on the Log tab (`fpad_source`, `fpad_status`, `fpad_q`) | `manage_options` | Read-only filtering/search; no nonce (no state change) |
 | Clear Log form | POST to the log page | `manage_options` + nonce `fpad_clear_log` (field `fpad_nonce`) | Resets `fpad_deactivation_log` to `array()` |
 | Save Settings form | POST to the settings tab | `manage_options` + nonce `fpad_save_settings` (field `fpad_settings_nonce`) | Writes `fpad_settings` |
 | Reinstall action | GET `?fpad_action=reinstall` | `manage_options` + nonce `fpad_reinstall` | Removes + reinstalls the drop-in, then redirects |
+| Delete entry action | GET `?fpad_action=delete&key=…` | `manage_options` + nonce `fpad_delete_{key}` | Removes one entry (matched by `entry_key()`), then redirects |
+| Export | `admin-post.php?action=fpad_export_log&format=csv|json` | `manage_options` + nonce `fpad_export_log` | Streams the full log as a download |
+| Copy report | Per-row button (vanilla JS) | `manage_options` | Copies a plain-text bug report to the clipboard; no request |
 | Action links | Plugins screen row | `manage_options` | "Settings" + "View Log" → admin page |
 | Site Health | Status test + Info section | (core-gated) | Reports protection status and recent fatals |
 
-There is no REST API and no AJAX endpoints. The only stored settings are in `fpad_settings`; all admin forms use the manual nonce-POST pattern (not the Settings API / `options.php`).
+There is no REST API and no AJAX endpoints. The only stored settings are in `fpad_settings`; all admin forms use the manual nonce-POST pattern (not the Settings API / `options.php`). On the log screen, other plugins'/core `admin_notices` are removed via `current_screen` so the page stays focused; the protection banner and `settings_errors()` feedback render inline in the page body and are unaffected.
 
 ## Class & method reference
 
