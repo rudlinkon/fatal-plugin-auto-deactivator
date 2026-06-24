@@ -141,7 +141,7 @@ Error logs are stored in your WordPress database as options. The plugin maintain
 
 == Changelog ==
 
-= 1.3.0 - unreleased =
+= 1.3.0 - 24/06/2026 =
 - Added: Protected plugins allowlist — choose plugins that must never be deactivated automatically, even if they cause a fatal error (the error is still logged and reported honestly)
 - Added: Log-only mode — detect and log fatal errors without ever deactivating a plugin
 - Added: Settings tab on the Fatal Plugin Log page for the allowlist and log-only mode
