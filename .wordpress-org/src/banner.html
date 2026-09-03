@@ -1,0 +1,76 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+	:root{
+		--brand:#2271b1; --brand-600:#1b5e94; --brand-200:#b8d6f2; --brand-100:#dcebf9;
+		--ok:#00a32a; --ok-50:#edfaef; --ok-700:#005c12;
+		--danger:#d63638; --danger-600:#b32d2e;
+		--ink-900:#1d2327; --ink-600:#50575e; --ink-500:#646970; --ink-100:#dcdcde; --ink-25:#f6f7f7;
+		--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+		--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+	}
+	*{box-sizing:border-box;margin:0;padding:0}
+	html,body{width:772px;height:250px;overflow:hidden}
+	body{
+		font-family:var(--sans);
+		background:linear-gradient(115deg,#2271b1 0%,#164e7e 52%,#0b2c46 100%);
+		position:relative;
+	}
+	.glow{position:absolute;inset:0;background:radial-gradient(620px 320px at 14% -10%,rgba(255,255,255,.20),rgba(255,255,255,0) 70%)}
+	.mark-bg{position:absolute;left:-104px;top:-96px;width:420px;height:420px;opacity:.06}
+	.wrap{position:relative;height:100%;display:flex;align-items:center;gap:34px;padding:0 46px}
+
+	.copy{flex:1;min-width:0}
+	.eyebrow{display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 8px;border-radius:999px;
+		background:rgba(255,255,255,.12);color:#dcebf9;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+	.eyebrow svg{width:12px;height:12px}
+	h1{margin-top:12px;color:#fff;font-size:37px;line-height:1.06;font-weight:800;letter-spacing:-.9px}
+	h1 span{display:block}
+	p{margin-top:11px;color:#c6dcf1;font-size:14px;line-height:1.5;max-width:340px}
+
+	.card{width:276px;flex:none;background:#fff;border-radius:14px;box-shadow:0 18px 40px rgba(6,26,44,.34),0 2px 6px rgba(6,26,44,.22);padding:14px 15px}
+	.card-head{display:flex;align-items:flex-start;gap:10px}
+	.tile{width:32px;height:32px;flex:none;border-radius:8px;background:var(--ok-50);color:var(--ok-700);display:flex;align-items:center;justify-content:center}
+	.tile svg{width:17px;height:17px}
+	.badges{display:flex;gap:5px;flex-wrap:wrap}
+	.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;line-height:1.5}
+	.badge svg{width:10px;height:10px}
+	.b-ok{background:var(--ok-50);color:var(--ok-700)}
+	.b-neutral{background:#f0f0f1;color:var(--ink-600)}
+	.name{margin-top:5px;color:var(--ink-900);font-size:13.5px;font-weight:700;line-height:1.2}
+	.slug{margin-top:2px;font-family:var(--mono);font-size:10px;color:var(--ink-500)}
+	.code{margin-top:10px;border-left:3px solid var(--danger);background:var(--ink-25);padding:7px 9px;font-family:var(--mono);font-size:9.5px;line-height:1.55;color:#2c3338}
+	.code b{display:block;font-family:var(--sans);font-size:8.5px;letter-spacing:.07em;color:var(--danger-600);text-transform:uppercase;margin-bottom:3px}
+	.fixed{margin-top:9px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:var(--ok-700)}
+	.fixed svg{width:12px;height:12px}
+</style></head><body>
+<div class="glow"></div>
+
+<svg class="mark-bg" viewBox="0 0 24 24" fill="#fff"><path d="M12 3l7 3v5.5c0 4.4-3 7.4-7 9.5-4-2.1-7-5.1-7-9.5V6z"/></svg>
+
+<div class="wrap">
+	<div class="copy">
+		<span class="eyebrow">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l7 3v5.5c0 4.4-3 7.4-7 9.5-4-2.1-7-5.1-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></svg>
+			Fatal error protection
+		</span>
+		<h1><span>Fatal Plugin</span><span>Auto Deactivator</span></h1>
+		<p>A plugin crashes, it gets switched off. The incident is logged and your site stays online.</p>
+	</div>
+
+	<div class="card">
+		<div class="card-head">
+			<span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span>
+			<div>
+				<div class="badges">
+					<span class="badge b-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>Deactivated</span>
+					<span class="badge b-neutral">Plugin</span>
+				</div>
+				<div class="name">WooCommerce</div>
+				<div class="slug">woocommerce/woocommerce.php</div>
+			</div>
+		</div>
+		<div class="code"><b>Fatal error</b>Uncaught Error: Call to undefined
+method WC_Cart::get_totals() in
+includes/class-wc-cart.php:412</div>
+	</div>
+</div>
+</body></html>

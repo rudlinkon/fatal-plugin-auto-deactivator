@@ -1,0 +1,119 @@
+/**
+ * Fatal Plugin Auto Deactivator — admin notice styles.
+ *
+ * Hand-written (not generated): notices render on every admin screen, so this
+ * file must stay tiny and must never touch anything outside .fpad-notice.
+ * The Tailwind build in admin.css is loaded only on the plugin's own screen.
+ */
+
+.fpad-notice {
+	border-left-width: 4px;
+	padding: 0;
+}
+
+/* Modifier kept explicit so the notice keeps its status rule even if core's
+   .notice-error styling changes. */
+.fpad-notice--danger {
+	border-left-color: #d63638;
+}
+
+.fpad-notice .fpad-notice-inner {
+	display: flex;
+	gap: 12px;
+	padding: 12px 12px 12px 14px;
+}
+
+.fpad-notice-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	background: #fbdcdc;
+	color: #b32d2e;
+}
+
+.fpad-notice-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.fpad-notice-body {
+	min-width: 0;
+}
+
+.fpad-notice p {
+	margin: 0;
+}
+
+.fpad-notice-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.fpad-notice .fpad-notice-text {
+	margin-top: 2px;
+	font-size: 13px;
+	color: #50575e;
+}
+
+.fpad-notice-list {
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: 6px;
+}
+
+.fpad-notice-item {
+	margin: 0;
+	padding: 8px 10px;
+	border-radius: 4px;
+	background: #f6f7f7;
+}
+
+.fpad-notice-plugin {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.fpad-notice-error {
+	display: block;
+	margin-top: 2px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.5;
+	color: #b32d2e;
+	word-break: break-word;
+}
+
+.fpad-notice .fpad-notice-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	margin-top: 10px;
+	font-size: 13px;
+}
+
+.fpad-notice-button {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 12px;
+	border-radius: 4px;
+	background: #2271b1;
+	color: #fff;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.fpad-notice-button:hover,
+.fpad-notice-button:focus {
+	background: #1b5e94;
+	color: #fff;
+}

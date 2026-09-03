@@ -52,3 +52,5 @@ postcss.config.js
 CLAUDE.md
 docs
 vendor
+# Admin UI build sources (built CSS is committed and shipped)
+assets/src

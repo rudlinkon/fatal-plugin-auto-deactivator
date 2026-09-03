@@ -1,0 +1,13 @@
+{
+  "name": "fatal-plugin-auto-deactivator",
+  "private": true,
+  "description": "Build tooling for the Fatal Plugin Auto Deactivator admin UI (Tailwind CSS).",
+  "scripts": {
+    "build": "tailwindcss -i ./assets/src/admin.css -o ./assets/css/admin.css --minify",
+    "dev": "tailwindcss -i ./assets/src/admin.css -o ./assets/css/admin.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

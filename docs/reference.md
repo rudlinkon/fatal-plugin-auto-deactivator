@@ -243,7 +243,8 @@ Internal helpers (private):
 | `get_settings()` | **Public since 1.5.0** (`FPAD_Notifier` reads through it). Reads `fpad_settings` with defaults incl. the notification keys — mirror of the handler's guarded version (sync pair) |
 | `last_watchdog_check()` | (1.5.0) Timestamp of the watchdog's last run from `fpad_watchdog_state`, 0 when never; feeds the banner line + debug info |
 | `get_active_plugin_choices()` | `active_plugins` → sorted `basename => display name` map |
-| `source_key( $file )` / `source_label()` / `source_labels()` / `classify_source()` | Re-classify a stored error path — mirror of `FPAD_Fatal_Error_Handler::detect_error_source()` |
+| `source_key( $file )` / `source_label()` / `source_labels()` | Re-classify a stored error path — mirror of `FPAD_Fatal_Error_Handler::detect_error_source()` |
+| `source_icon( $source_key )` / `unattributed_copy( $source_key )` | Card mark icon, and the headline + recovery note shown when an incident matched no plugin |
 | `entry_status( $entry )` | Canonical status, inferring `deactivated`/`logged`/`unattributed` for pre-1.3.0 entries lacking `status` |
 | `status_badge( $status )` / `get_error_type_string( $type )` | Badge HTML / E_* constant → label |
 | `get_protection_state()` / `protection_message()` / `reinstall_url()` / `render_protection_banner()` | Drop-in status surfacing + nonce'd reinstall link |

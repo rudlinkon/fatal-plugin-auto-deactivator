@@ -1,0 +1,618 @@
+/**
+ * Component layer for the Fatal Plugin Auto Deactivator admin screens.
+ *
+ * Imported by admin.css between Tailwind's theme and its utilities, so a utility
+ * class written in the markup still wins over a component rule here.
+ *
+ * Do not wrap any of this in @layer — see the note in admin.css.
+ */
+
+/* Minimal, scoped normalisation. Preflight is not loaded, so the browser's
+   default `p { margin: 1em 0 }` (and friends) would otherwise leak into every
+   component. :where() keeps the specificity at zero for the id, so it beats the
+   user-agent sheet by origin but still loses to any .fpad-* rule below. */
+:where(#fpad-app) p,
+:where(#fpad-app) h1,
+:where(#fpad-app) h2,
+:where(#fpad-app) h3,
+:where(#fpad-app) fieldset,
+:where(#fpad-app) legend,
+:where(#fpad-app) article,
+:where(#fpad-app) section {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+/* ---------------------------------------------------------------- Shell */
+
+/* No max-width: every other wp-admin screen fills the content column, and a
+   fixed cap left a wide empty gutter on the right on large monitors. Blocks
+   that need a readable measure (help text, panel descriptions, empty states)
+   cap themselves instead. */
+#fpad-app {
+	@apply fpad:font-sans fpad:text-[13px] fpad:leading-relaxed fpad:text-ink-800 fpad:pb-16;
+}
+
+#fpad-app *,
+#fpad-app *::before,
+#fpad-app *::after {
+	box-sizing: border-box;
+}
+
+#fpad-app a {
+	@apply fpad:text-brand-500;
+}
+
+.fpad-masthead {
+	@apply fpad:flex fpad:flex-wrap fpad:items-center fpad:gap-4 fpad:justify-between fpad:mb-4 fpad:mt-2;
+}
+
+.fpad-brand {
+	@apply fpad:flex fpad:items-center fpad:gap-3;
+}
+
+/* Holds the logo, which paints its own tile — hence no background here. */
+.fpad-brand-mark {
+	@apply fpad:flex fpad:h-10 fpad:w-10 fpad:shrink-0 fpad:items-center fpad:justify-center fpad:overflow-hidden fpad:rounded-lg fpad:shadow-card;
+}
+
+.fpad-brand-mark svg {
+	@apply fpad:h-10 fpad:w-10;
+}
+
+#fpad-app .fpad-title {
+	@apply fpad:m-0 fpad:p-0 fpad:text-[19px] fpad:font-semibold fpad:leading-tight fpad:text-ink-900;
+}
+
+.fpad-subtitle {
+	@apply fpad:m-0 fpad:mt-0.5 fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-masthead-actions {
+	@apply fpad:flex fpad:flex-wrap fpad:items-center fpad:gap-2;
+}
+
+/* ----------------------------------------------------------------- Tabs */
+
+.fpad-tabs {
+	@apply fpad:mb-5 fpad:flex fpad:items-center fpad:gap-1 fpad:rounded-lg fpad:border fpad:border-ink-100 fpad:bg-white fpad:p-1 fpad:shadow-card;
+	width: fit-content;
+}
+
+#fpad-app .fpad-tab {
+	@apply fpad:inline-flex fpad:items-center fpad:gap-2 fpad:rounded-md fpad:px-4 fpad:py-2 fpad:text-[13px] fpad:font-medium fpad:text-ink-600 fpad:no-underline fpad:transition-colors;
+}
+
+#fpad-app .fpad-tab:hover {
+	@apply fpad:bg-ink-25 fpad:text-ink-900;
+}
+
+#fpad-app .fpad-tab.is-active {
+	@apply fpad:bg-brand-500 fpad:text-white;
+}
+
+#fpad-app .fpad-tab:focus-visible {
+	@apply fpad:outline-2 fpad:outline-offset-2 fpad:outline-brand-500;
+}
+
+.fpad-tab svg {
+	@apply fpad:h-4 fpad:w-4;
+}
+
+.fpad-tab-count {
+	@apply fpad:rounded-full fpad:bg-ink-50 fpad:px-2 fpad:text-[11px] fpad:font-semibold fpad:text-ink-600;
+}
+
+.fpad-tab.is-active .fpad-tab-count {
+	@apply fpad:bg-white/25 fpad:text-white;
+}
+
+/* --------------------------------------------------------------- Panels */
+
+.fpad-panel {
+	@apply fpad:mb-5 fpad:overflow-hidden fpad:rounded-lg fpad:border fpad:border-ink-100 fpad:bg-white fpad:shadow-card;
+}
+
+.fpad-panel-head {
+	@apply fpad:flex fpad:flex-wrap fpad:items-start fpad:justify-between fpad:gap-3 fpad:border-b fpad:border-ink-100 fpad:bg-ink-25 fpad:px-5 fpad:py-4;
+}
+
+#fpad-app .fpad-panel-title {
+	@apply fpad:m-0 fpad:p-0 fpad:text-[14px] fpad:font-semibold fpad:text-ink-900;
+}
+
+.fpad-panel-desc {
+	@apply fpad:m-0 fpad:mt-1 fpad:max-w-2xl fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-panel-body {
+	@apply fpad:px-5 fpad:py-4;
+}
+
+.fpad-panel-body-flush {
+	@apply fpad:p-0;
+}
+
+.fpad-panel-foot {
+	@apply fpad:flex fpad:flex-wrap fpad:items-center fpad:justify-between fpad:gap-3 fpad:border-t fpad:border-ink-100 fpad:bg-ink-25 fpad:px-5 fpad:py-3;
+}
+
+/* ------------------------------------------------------ Protection state */
+
+.fpad-state {
+	@apply fpad:mb-5 fpad:flex fpad:flex-wrap fpad:items-center fpad:gap-4 fpad:rounded-lg fpad:border fpad:p-4 fpad:shadow-card;
+}
+
+.fpad-state--ok {
+	@apply fpad:border-ok-200 fpad:bg-ok-50;
+}
+
+.fpad-state--bad {
+	@apply fpad:border-danger-200 fpad:bg-danger-50;
+}
+
+.fpad-state-icon {
+	@apply fpad:flex fpad:h-10 fpad:w-10 fpad:shrink-0 fpad:items-center fpad:justify-center fpad:rounded-full fpad:text-white;
+}
+
+.fpad-state--ok .fpad-state-icon {
+	@apply fpad:bg-ok-500;
+}
+
+.fpad-state--bad .fpad-state-icon {
+	@apply fpad:bg-danger-500;
+}
+
+.fpad-state-icon svg {
+	@apply fpad:h-5 fpad:w-5;
+}
+
+.fpad-state-body {
+	@apply fpad:min-w-[240px] fpad:flex-1;
+}
+
+.fpad-state-title {
+	@apply fpad:m-0 fpad:text-[14px] fpad:font-semibold fpad:text-ink-900;
+}
+
+.fpad-state-text {
+	@apply fpad:m-0 fpad:mt-1 fpad:text-[12px] fpad:text-ink-600;
+}
+
+/* ---------------------------------------------------------------- Stats */
+
+.fpad-stats {
+	@apply fpad:mb-5 fpad:grid fpad:gap-3 fpad:grid-cols-1 fpad:sm:grid-cols-2 fpad:xl:grid-cols-4;
+}
+
+.fpad-stat {
+	@apply fpad:flex fpad:items-center fpad:gap-3 fpad:rounded-lg fpad:border fpad:border-ink-100 fpad:bg-white fpad:px-4 fpad:py-3 fpad:shadow-card;
+}
+
+.fpad-stat-icon {
+	@apply fpad:flex fpad:h-9 fpad:w-9 fpad:shrink-0 fpad:items-center fpad:justify-center fpad:rounded-md fpad:bg-brand-50 fpad:text-brand-600;
+}
+
+.fpad-stat-icon svg {
+	@apply fpad:h-[18px] fpad:w-[18px];
+}
+
+.fpad-stat--danger .fpad-stat-icon {
+	@apply fpad:bg-danger-50 fpad:text-danger-600;
+}
+
+.fpad-stat--ok .fpad-stat-icon {
+	@apply fpad:bg-ok-50 fpad:text-ok-600;
+}
+
+.fpad-stat--warn .fpad-stat-icon {
+	@apply fpad:bg-warn-50 fpad:text-warn-600;
+}
+
+.fpad-stat-value {
+	@apply fpad:block fpad:text-[20px] fpad:font-semibold fpad:leading-tight fpad:text-ink-900;
+}
+
+.fpad-stat-label {
+	@apply fpad:block fpad:text-[12px] fpad:text-ink-500;
+}
+
+/* -------------------------------------------------------------- Toolbar */
+
+.fpad-toolbar {
+	@apply fpad:flex fpad:flex-wrap fpad:items-end fpad:gap-3;
+}
+
+.fpad-field {
+	@apply fpad:flex fpad:flex-col fpad:gap-1;
+}
+
+.fpad-field-label {
+	@apply fpad:text-[11px] fpad:font-semibold fpad:uppercase fpad:tracking-wide fpad:text-ink-500;
+}
+
+#fpad-app .fpad-input,
+#fpad-app .fpad-select {
+	@apply fpad:h-9 fpad:min-h-0 fpad:rounded-md fpad:border fpad:border-ink-200 fpad:bg-white fpad:px-3 fpad:text-[13px] fpad:text-ink-900 fpad:shadow-none;
+	line-height: 1.4;
+}
+
+#fpad-app .fpad-input:focus,
+#fpad-app .fpad-select:focus {
+	@apply fpad:border-brand-500 fpad:outline-none;
+	box-shadow: 0 0 0 1px var(--fpad-color-brand-500);
+}
+
+#fpad-app .fpad-search {
+	@apply fpad:w-full fpad:sm:w-72;
+}
+
+/* Source labels are short words ("core", "theme"), so the box collapses to a
+   sliver next to the Outcome select. Floor the width so the toolbar reads as a
+   row of equal controls. */
+#fpad-app .fpad-select {
+	@apply fpad:min-w-44;
+}
+
+/* -------------------------------------------------------------- Buttons */
+
+#fpad-app .fpad-btn {
+	@apply fpad:inline-flex fpad:h-9 fpad:cursor-pointer fpad:items-center fpad:justify-center fpad:gap-2 fpad:rounded-md fpad:border fpad:border-ink-200 fpad:bg-white fpad:px-3 fpad:text-[13px] fpad:font-medium fpad:text-ink-700 fpad:no-underline fpad:shadow-none fpad:transition-colors;
+}
+
+#fpad-app .fpad-btn:hover {
+	@apply fpad:border-ink-300 fpad:bg-ink-25 fpad:text-ink-900;
+}
+
+#fpad-app .fpad-btn:focus-visible {
+	@apply fpad:outline-2 fpad:outline-offset-2 fpad:outline-brand-500;
+}
+
+.fpad-btn svg {
+	@apply fpad:h-4 fpad:w-4;
+}
+
+#fpad-app .fpad-btn--primary {
+	@apply fpad:border-brand-500 fpad:bg-brand-500 fpad:text-white;
+}
+
+#fpad-app .fpad-btn--primary:hover {
+	@apply fpad:border-brand-600 fpad:bg-brand-600 fpad:text-white;
+}
+
+#fpad-app .fpad-btn--danger {
+	@apply fpad:border-danger-200 fpad:bg-white fpad:text-danger-600;
+}
+
+#fpad-app .fpad-btn--danger:hover {
+	@apply fpad:border-danger-500 fpad:bg-danger-50 fpad:text-danger-700;
+}
+
+#fpad-app .fpad-btn--ghost {
+	@apply fpad:border-transparent fpad:bg-transparent fpad:text-ink-600;
+}
+
+#fpad-app .fpad-btn--ghost:hover {
+	@apply fpad:bg-ink-50 fpad:text-ink-900;
+}
+
+#fpad-app .fpad-btn--sm {
+	@apply fpad:h-7 fpad:gap-1.5 fpad:px-2 fpad:text-[12px];
+}
+
+.fpad-btn--sm svg {
+	@apply fpad:h-3.5 fpad:w-3.5;
+}
+
+/* --------------------------------------------------------------- Badges */
+
+.fpad-badge {
+	@apply fpad:inline-flex fpad:items-center fpad:gap-1 fpad:rounded-full fpad:px-2 fpad:py-0.5 fpad:text-[11px] fpad:font-semibold fpad:leading-5 fpad:whitespace-nowrap;
+}
+
+.fpad-badge--ok {
+	@apply fpad:bg-ok-50 fpad:text-ok-700;
+}
+
+.fpad-badge--warn {
+	@apply fpad:bg-warn-50 fpad:text-warn-700;
+}
+
+.fpad-badge--danger {
+	@apply fpad:bg-danger-50 fpad:text-danger-700;
+}
+
+.fpad-badge--info {
+	@apply fpad:bg-brand-50 fpad:text-brand-700;
+}
+
+.fpad-badge--neutral {
+	@apply fpad:bg-ink-50 fpad:text-ink-600;
+}
+
+.fpad-badge--source {
+	@apply fpad:bg-ink-50 fpad:text-ink-600 fpad:capitalize;
+}
+
+.fpad-chip {
+	@apply fpad:inline-flex fpad:max-w-full fpad:items-center fpad:gap-1.5 fpad:rounded-md fpad:bg-ink-25 fpad:px-2 fpad:py-1 fpad:text-[11px] fpad:text-ink-600;
+}
+
+.fpad-chip svg {
+	@apply fpad:h-3.5 fpad:w-3.5 fpad:shrink-0 fpad:text-ink-400;
+}
+
+.fpad-chip-value {
+	@apply fpad:truncate fpad:font-medium fpad:text-ink-700;
+}
+
+/* --------------------------------------------------------- Log entries */
+
+/* Cards on a tinted tray, not rows in a divided list: at full width a hairline
+   rule was too weak to separate incidents that are themselves multi-line. */
+.fpad-entries {
+	@apply fpad:flex fpad:flex-col fpad:gap-3 fpad:bg-ink-25 fpad:p-4;
+}
+
+.fpad-entry {
+	@apply fpad:rounded-lg fpad:border fpad:border-ink-100 fpad:bg-white fpad:px-4 fpad:py-4 fpad:shadow-card fpad:transition-colors;
+}
+
+.fpad-entry:hover {
+	@apply fpad:border-ink-300;
+}
+
+/* Payload column: indented to the headline, so the error block, path and chips
+   share one left edge with the title instead of one with the icon tile. */
+.fpad-entry-body {
+	@apply fpad:sm:pl-12;
+}
+
+.fpad-entry-head {
+	@apply fpad:flex fpad:flex-wrap fpad:items-start fpad:gap-3;
+}
+
+/* Icon tile: glyph = where the crash came from, tint = what we did about it. */
+.fpad-entry-mark {
+	@apply fpad:flex fpad:h-9 fpad:w-9 fpad:shrink-0 fpad:items-center fpad:justify-center fpad:rounded-md fpad:bg-ink-50 fpad:text-ink-500;
+}
+
+.fpad-entry-mark svg {
+	@apply fpad:h-[18px] fpad:w-[18px];
+}
+
+.fpad-entry-mark--ok {
+	@apply fpad:bg-ok-50 fpad:text-ok-600;
+}
+
+.fpad-entry-mark--warn {
+	@apply fpad:bg-warn-50 fpad:text-warn-600;
+}
+
+.fpad-entry-mark--danger {
+	@apply fpad:bg-danger-50 fpad:text-danger-600;
+}
+
+.fpad-entry-mark--info {
+	@apply fpad:bg-brand-50 fpad:text-brand-600;
+}
+
+.fpad-entry-ident {
+	@apply fpad:min-w-[220px] fpad:flex-1;
+}
+
+.fpad-entry-badges {
+	@apply fpad:mb-1.5 fpad:flex fpad:flex-wrap fpad:items-center fpad:gap-1.5;
+}
+
+.fpad-entry-title {
+	@apply fpad:m-0 fpad:text-[14px] fpad:font-semibold fpad:text-ink-900;
+}
+
+.fpad-entry-sub {
+	@apply fpad:m-0 fpad:mt-0.5 fpad:font-mono fpad:text-[11px] fpad:break-all fpad:text-ink-500;
+}
+
+/* Prose, not a file path: the unattributed card explains itself here, so it
+   keeps the sans stack the mono .fpad-entry-sub deliberately drops. */
+.fpad-entry-note {
+	@apply fpad:m-0 fpad:mt-0.5 fpad:max-w-2xl fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-entry-actions {
+	@apply fpad:flex fpad:shrink-0 fpad:items-center fpad:gap-2;
+}
+
+.fpad-entry-when {
+	@apply fpad:text-right fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-entry-when strong {
+	@apply fpad:block fpad:font-semibold fpad:text-ink-700;
+}
+
+/* Square-edged on purpose: the block runs full width against the card padding,
+   and rounded corners on a code block read as a floating chip.
+
+   Capped and scrollable rather than clamped: a 60-line stack trace must not
+   bury the next incident, and its own scrollbar beats a "show more" toggle.
+   The markup carries tabindex="0" so the scroll region is keyboard reachable;
+   overscroll-contain keeps the page still once the block hits its end. */
+.fpad-code {
+	@apply fpad:mt-3 fpad:max-h-44 fpad:overflow-auto fpad:overscroll-contain fpad:border-l-[3px] fpad:border-danger-500 fpad:bg-ink-25 fpad:px-3 fpad:py-2.5 fpad:font-mono fpad:text-[12px] fpad:leading-[1.6] fpad:whitespace-pre-wrap fpad:break-words fpad:text-ink-800;
+}
+
+.fpad-code:focus-visible {
+	@apply fpad:outline-2 fpad:outline-offset-2 fpad:outline-brand-500;
+}
+
+.fpad-code strong {
+	@apply fpad:mb-1 fpad:block fpad:font-sans fpad:text-[11px] fpad:font-semibold fpad:uppercase fpad:tracking-wide fpad:text-danger-600;
+}
+
+.fpad-path {
+	@apply fpad:mt-2 fpad:font-mono fpad:text-[11px] fpad:break-all fpad:text-ink-500;
+}
+
+.fpad-entry-meta {
+	@apply fpad:mt-3 fpad:flex fpad:flex-wrap fpad:gap-1.5;
+}
+
+/* --------------------------------------------------------- Empty states */
+
+.fpad-empty {
+	@apply fpad:flex fpad:flex-col fpad:items-center fpad:gap-2 fpad:px-6 fpad:py-12 fpad:text-center;
+}
+
+.fpad-empty-icon {
+	@apply fpad:flex fpad:h-12 fpad:w-12 fpad:items-center fpad:justify-center fpad:rounded-full fpad:bg-ok-50 fpad:text-ok-600;
+}
+
+.fpad-empty-icon svg {
+	@apply fpad:h-6 fpad:w-6;
+}
+
+.fpad-empty-title {
+	@apply fpad:m-0 fpad:text-[14px] fpad:font-semibold fpad:text-ink-900;
+}
+
+.fpad-empty-text {
+	@apply fpad:m-0 fpad:max-w-md fpad:text-[12px] fpad:text-ink-500;
+}
+
+/* ------------------------------------------------------------- Settings */
+
+.fpad-setting {
+	@apply fpad:flex fpad:flex-wrap fpad:items-start fpad:justify-between fpad:gap-4 fpad:border-b fpad:border-ink-100 fpad:px-5 fpad:py-4;
+}
+
+.fpad-setting:last-child {
+	@apply fpad:border-b-0;
+}
+
+.fpad-setting-body {
+	@apply fpad:min-w-[240px] fpad:flex-1;
+}
+
+.fpad-setting-label {
+	@apply fpad:m-0 fpad:text-[13px] fpad:font-semibold fpad:text-ink-900;
+}
+
+.fpad-help {
+	@apply fpad:m-0 fpad:mt-1 fpad:max-w-2xl fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-setting-control {
+	@apply fpad:flex fpad:shrink-0 fpad:items-center fpad:gap-2;
+}
+
+/* Switch: a visually hidden checkbox drives the track/knob via peer-*. */
+.fpad-switch {
+	@apply fpad:inline-flex fpad:cursor-pointer fpad:items-center fpad:gap-2;
+}
+
+#fpad-app .fpad-switch input {
+	@apply fpad:sr-only;
+}
+
+.fpad-switch-track {
+	@apply fpad:relative fpad:h-5 fpad:w-9 fpad:shrink-0 fpad:rounded-full fpad:bg-ink-200 fpad:transition-colors;
+}
+
+.fpad-switch-track::after {
+	content: "";
+	@apply fpad:absolute fpad:left-0.5 fpad:top-0.5 fpad:h-4 fpad:w-4 fpad:rounded-full fpad:bg-white fpad:shadow-card fpad:transition-transform;
+}
+
+.fpad-switch input:checked + .fpad-switch-track {
+	@apply fpad:bg-brand-500;
+}
+
+.fpad-switch input:checked + .fpad-switch-track::after {
+	@apply fpad:translate-x-4;
+}
+
+.fpad-switch input:focus-visible + .fpad-switch-track {
+	@apply fpad:outline-2 fpad:outline-offset-2 fpad:outline-brand-500;
+}
+
+.fpad-switch-text {
+	@apply fpad:text-[12px] fpad:font-medium fpad:text-ink-600;
+}
+
+.fpad-checklist {
+	@apply fpad:grid fpad:gap-1.5 fpad:grid-cols-1 fpad:sm:grid-cols-2 fpad:xl:grid-cols-3;
+}
+
+.fpad-check {
+	@apply fpad:flex fpad:cursor-pointer fpad:items-center fpad:gap-2 fpad:rounded-md fpad:border fpad:border-ink-100 fpad:bg-white fpad:px-3 fpad:py-2 fpad:text-[13px] fpad:text-ink-700 fpad:transition-colors;
+}
+
+.fpad-check:hover {
+	@apply fpad:border-ink-200 fpad:bg-ink-25;
+}
+
+#fpad-app .fpad-check input {
+	@apply fpad:m-0 fpad:shrink-0;
+}
+
+.fpad-check-text {
+	@apply fpad:truncate;
+}
+
+.fpad-radio-row {
+	@apply fpad:flex fpad:flex-wrap fpad:items-center fpad:gap-4;
+}
+
+.fpad-radio {
+	@apply fpad:flex fpad:cursor-pointer fpad:items-center fpad:gap-2 fpad:text-[13px] fpad:text-ink-700;
+}
+
+.fpad-savebar {
+	@apply fpad:sticky fpad:bottom-0 fpad:z-10 fpad:mt-5 fpad:flex fpad:flex-wrap fpad:items-center fpad:justify-between fpad:gap-3 fpad:rounded-lg fpad:border fpad:border-ink-100 fpad:bg-white/95 fpad:px-4 fpad:py-3 fpad:shadow-pop fpad:backdrop-blur;
+}
+
+/* --------------------------------------------------- Feedback / notices */
+
+.fpad-notices .notice,
+.fpad-notices div.updated,
+.fpad-notices div.error {
+	@apply fpad:m-0 fpad:mb-3 fpad:rounded-md fpad:border-l-4 fpad:border fpad:border-ink-100 fpad:bg-white fpad:px-4 fpad:py-2.5 fpad:shadow-card;
+}
+
+.fpad-notices .notice {
+	@apply fpad:relative fpad:pr-10;
+}
+
+.fpad-notices .notice p {
+	@apply fpad:m-0 fpad:text-[13px];
+}
+
+/* Keep WordPress's status colour on the left rule: the rounded surface above
+   repaints all four borders, which would otherwise flatten it to grey. */
+.fpad-notices .notice-success,
+.fpad-notices div.updated {
+	border-left-color: var(--fpad-color-ok-500);
+}
+
+.fpad-notices .notice-error,
+.fpad-notices div.error {
+	border-left-color: var(--fpad-color-danger-500);
+}
+
+.fpad-notices .notice-warning {
+	border-left-color: var(--fpad-color-warn-500);
+}
+
+.fpad-notices .notice-info {
+	border-left-color: var(--fpad-color-brand-500);
+}
+
+.fpad-inline-note {
+	@apply fpad:m-0 fpad:text-[12px] fpad:text-ink-500;
+}
+
+.fpad-sr-only {
+	@apply fpad:sr-only;
+}

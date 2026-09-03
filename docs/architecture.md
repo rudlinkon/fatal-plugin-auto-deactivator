@@ -17,9 +17,15 @@ wp-content/
         ├── class-fatal-error-handler.php   ← shutdown-context error handler
         ├── class-dropin-manager.php        ← install/remove/verify the drop-in copy
         ├── class-admin.php                 ← notices, log page, settings, action links
+        ├── class-admin-ui.php              ← admin markup vocabulary: icons, buttons, badges, panels
         ├── class-notifier.php              ← alert delivery on normal requests (1.5.0)
         ├── class-plugin-lifecycle.php      ← activate/deactivate/uninstall + admin_init check + watchdog
         └── class-utils.php                 ← textdomain, self-update drop-in refresh
+    └── assets/
+        ├── src/admin.css                   ← Tailwind source (dev only, not shipped)
+        ├── css/admin.css                   ← built admin stylesheet (committed + shipped)
+        ├── css/notice.css                  ← hand-written admin-notice styles
+        └── js/admin.js                     ← admin behaviours (copy, confirm, filter, switch captions)
 ```
 
 ## Entry points and initialization
@@ -168,6 +174,7 @@ Ownership check: `FPAD_Dropin_Manager` identifies "our" drop-in by searching its
 | `FPAD_Admin` | Admin | Error notices + protection warning, Tools → Fatal Plugin Log page (Log + Settings tabs, protection banner, filters/search, per-entry delete, CSV/JSON export, copy-report), clear-log/settings/reinstall handling, Site Health test + debug info, "Settings"/"View Log" action links, notice suppression on the log screen |
 | `FPAD_Plugin_Lifecycle` | Normal | Activation/deactivation/uninstall hooks; `admin_init` drop-in health check; hourly protection watchdog (verify → heal → alert) |
 | `FPAD_Notifier` | Normal | Deliver queued alerts (`init` + cron backstop); test sends; generic `dispatch_event()` used by the watchdog |
+| `FPAD_Admin_UI` | Admin | Presentation-only helpers (icons, buttons, badges, chips, panels, setting rows) used by `FPAD_Admin`; see [ui.md](ui.md) |
 | `FPAD_Utils` | Normal | Load textdomain; refresh drop-in after self-update |
 
 There is no autoloader and no namespace — classes use the `FPAD_` prefix and are `require_once`'d explicitly in the main plugin file. Initialization is static (`::init()`) for `FPAD_Utils`, `FPAD_Admin`, and `FPAD_Plugin_Lifecycle`; `FPAD_Dropin_Manager` and `FPAD_Fatal_Error_Handler` are instantiated on demand.

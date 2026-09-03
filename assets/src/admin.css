@@ -1,0 +1,82 @@
+/**
+ * Fatal Plugin Auto Deactivator — admin UI source stylesheet.
+ *
+ * Built with the Tailwind CLI into ../css/admin.css (committed, so the shipped
+ * plugin needs no build step):
+ *
+ *   npm install && npm run build
+ *
+ * Conventions (see docs/ui.md):
+ * - Tailwind utilities are prefixed: class="fpad:flex fpad:gap-3".
+ * - Preflight is NOT loaded — this stylesheet runs inside wp-admin and must
+ *   never reset WordPress's own elements.
+ * - Repeated furniture lives in components.css as .fpad-* classes, scoped to
+ *   #fpad-app so wp-admin's element-level rules cannot outrank them.
+ * - Nothing is wrapped in a cascade layer, deliberately: wp-admin ships its CSS
+ *   unlayered, and an unlayered rule beats a layered one no matter how specific
+ *   the layered selector is. Inside a layer, core's `a { color: #2271b1 }` won
+ *   over `#fpad-app .fpad-tab.is-active { color: #fff }` and the active tab read
+ *   blue-on-blue. Import order (theme → components → utilities) is what keeps a
+ *   utility in the markup able to override a component.
+ */
+
+@import "tailwindcss/theme.css" prefix(fpad);
+@import "./components.css";
+@import "tailwindcss/utilities.css" prefix(fpad) source(none);
+
+@source "../../includes/**/*.php";
+@source "../js/**/*.js";
+
+@theme {
+	--font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+	/* Brand: WordPress blue, extended into a full ramp. */
+	--color-brand-50: #f0f6fc;
+	--color-brand-100: #dcebf9;
+	--color-brand-200: #b8d6f2;
+	--color-brand-300: #8dbde8;
+	--color-brand-400: #5b9dd9;
+	--color-brand-500: #2271b1;
+	--color-brand-600: #1b5e94;
+	--color-brand-700: #144a76;
+	--color-brand-800: #0f3a5c;
+	--color-brand-900: #0b2c46;
+
+	/* Neutrals: WordPress admin greys. */
+	--color-ink-25: #f6f7f7;
+	--color-ink-50: #f0f0f1;
+	--color-ink-100: #dcdcde;
+	--color-ink-200: #c3c4c7;
+	--color-ink-300: #a7aaad;
+	--color-ink-400: #8c8f94;
+	--color-ink-500: #646970;
+	--color-ink-600: #50575e;
+	--color-ink-700: #3c434a;
+	--color-ink-800: #2c3338;
+	--color-ink-900: #1d2327;
+
+	--color-ok-50: #edfaef;
+	--color-ok-100: #d3f0d9;
+	--color-ok-200: #a3e0b3;
+	--color-ok-500: #00a32a;
+	--color-ok-600: #008a20;
+	--color-ok-700: #005c12;
+
+	--color-warn-50: #fdf6e6;
+	--color-warn-100: #f9e8c0;
+	--color-warn-200: #f2d38a;
+	--color-warn-500: #dba617;
+	--color-warn-600: #b58a12;
+	--color-warn-700: #7a5c00;
+
+	--color-danger-50: #fdf1f1;
+	--color-danger-100: #fbdcdc;
+	--color-danger-200: #f4b7b7;
+	--color-danger-500: #d63638;
+	--color-danger-600: #b32d2e;
+	--color-danger-700: #8a2424;
+
+	--shadow-card: 0 1px 2px rgb(29 35 39 / 0.05), 0 1px 3px rgb(29 35 39 / 0.07);
+	--shadow-pop: 0 4px 12px rgb(29 35 39 / 0.10);
+}

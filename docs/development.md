@@ -2,7 +2,7 @@
 
 ## Setup
 
-The plugin is plain PHP with no build step, no npm, and no runtime Composer dependencies. Setup is just placing the repo in a WordPress install:
+The plugin ships as plain PHP with no runtime dependencies — the one build artifact, the admin stylesheet, is committed, so a checkout runs as-is. Setup is just placing the repo in a WordPress install:
 
 1. Clone into `wp-content/plugins/fatal-plugin-auto-deactivator/` of a local WordPress site (any local stack: wp-env, LocalWP, Docker, Studio, etc.).
 2. Activate via the Plugins screen or `wp plugin activate fatal-plugin-auto-deactivator`.
@@ -13,6 +13,18 @@ Requirements for the environment:
 - WordPress ≥ 5.3 (drop-in support requires ≥ 5.2), PHP ≥ 7.0 — keep code compatible with PHP 7.0 (no typed properties, no arrow functions, no null coalescing assignment).
 - `wp-content/` must be writable (the drop-in is copied there).
 - For meaningful manual testing, set `define( 'WP_DEBUG', true );` in `wp-config.php` so the error page shows details. Note the detail gate (since 1.2.1): detail shows only when `WP_DEBUG` is on **and** `WP_DEBUG_DISPLAY` is not explicitly `false`; `define( 'FPAD_SHOW_ERROR_DETAILS', true );` forces it on regardless.
+
+### Admin UI build (only when you touch the interface)
+
+The admin stylesheet is generated from Tailwind CSS. The output `assets/css/admin.css` is committed and shipped; npm is needed only to regenerate it.
+
+```bash
+npm install      # once
+npm run build    # assets/src/admin.css -> assets/css/admin.css
+npm run dev      # watch mode
+```
+
+Rebuild and commit the CSS with any markup change that introduces a new `fpad:` utility class — Tailwind only emits classes it can find in `includes/**/*.php` and `assets/js/**/*.js`. Full guide, including the design tokens and component vocabulary: [ui.md](ui.md).
 
 ### Optional dev tooling
 

@@ -11,6 +11,7 @@ The codebase is small and flat — one bootstrap file plus five classes in `incl
 | `includes/fatal-error-handler-dropin.php` | — (drop-in source, copied to `wp-content/fatal-error-handler.php`) | **PHP shutdown after a fatal** |
 | `includes/class-dropin-manager.php` | `FPAD_Dropin_Manager` | Normal (admin/lifecycle/cron) |
 | `includes/class-admin.php` | `FPAD_Admin` | wp-admin only |
+| `includes/class-admin-ui.php` | `FPAD_Admin_UI` | wp-admin only (presentation helpers — see [ui.md](ui.md)) |
 | `includes/class-notifier.php` | `FPAD_Notifier` | Normal requests + cron (alert delivery, since 1.5.0) |
 | `includes/class-plugin-lifecycle.php` | `FPAD_Plugin_Lifecycle` | Activation/deactivation/uninstall + `admin_init` + watchdog cron |
 | `includes/class-utils.php` | `FPAD_Utils` | Normal plugin load |
@@ -65,29 +66,32 @@ All in `includes/class-fatal-error-handler.php` unless noted. Everything here mu
 | Survive self-update (plugin dir wiped on update) | `FPAD_Utils::plugin_upgrade_hook()` on `upgrader_process_complete` | `class-utils.php` | 1.0.1 |
 | Options cleanup on uninstall | `FPAD_Plugin_Lifecycle::uninstall()` | `class-plugin-lifecycle.php` | 1.0.0 |
 
-### Admin UI (all in `includes/class-admin.php`)
+### Admin UI (`includes/class-admin.php` + `includes/class-admin-ui.php`)
 
-The screen is **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), registered by `add_settings_page()`, rendered by `render_log_page()` with two tabs (Log, Settings).
+The screen is **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), registered by `add_settings_page()`, rendered by `render_log_page()` with two tabs (Log, Settings). `FPAD_Admin` owns the data and composition; `FPAD_Admin_UI` owns the markup vocabulary (icons, buttons, badges, chips, panels, setting rows). Styling lives in `assets/` — read [ui.md](ui.md) before changing any of it.
 
 | Feature | Function(s) | Since |
 |---------|-------------|-------|
 | Hook wiring for everything below | `init()` | 1.0.0 |
 | "Plugin X was deactivated" notices (queue → display → clear) | `display_admin_notices()` | 1.0.0 |
 | Site-wide "protection not active" warning | `maybe_show_protection_notice()`, `protection_message()`, `get_protection_state()` | 1.3.0 |
-| Page shell: title, tabs, feedback messages | `render_log_page()` | 1.1.0 (tabs 1.3.0) |
-| Protection-status banner on the log page | `render_protection_banner()` | 1.3.0 |
+| Page shell: masthead, tabs, feedback messages | `render_log_page()`, `render_masthead()` | 1.1.0 (tabs 1.3.0) |
+| Protection-status card on the log page | `render_protection_banner()` | 1.3.0 |
+| Asset loading (Tailwind build on our screen, notice CSS elsewhere) | `enqueue_assets()`, `has_pending_notice()`, `SCREEN_ID` | 1.6.0 |
+| Markup vocabulary (icons, buttons, badges, chips, panels, rows, switches) | `FPAD_Admin_UI::*` — see [ui.md §5](ui.md#5-php-helper-api--fpad_admin_ui) | 1.6.0 |
 | One-click "Reinstall protection" | `handle_admin_actions()` (`fpad_action=reinstall`), `reinstall_url()` | 1.3.0 |
 | Log tab: summary cards | `render_log_summary()` | 1.2.0 |
-| Log tab: incident table, badges, ×N counts, meta rows | `render_log_table()`, `status_badge()`, `get_error_type_string()`, `classify_source()`/`source_key()`/`source_label()`, `entry_status()` | 1.1.0–1.4.0 |
-| Filter by source/status + free-text search | `render_filter_bar()`, `filter_log()` (GET params `fpad_source`, `fpad_status`, `fpad_q`) | 1.4.0 |
+| Log tab: incident cards, badges, ×N counts, context chips | `render_entries()`, `status_badge()`/`status_meta()`, `get_error_type_string()`, `source_key()`/`source_label()`/`source_icon()`/`unattributed_copy()`, `entry_status()` | 1.1.0–1.6.0 |
+| Filter by source/status + free-text search | `render_filter_bar()`, `filter_log()`, `status_labels()` (GET params `fpad_source`, `fpad_status`, `fpad_q`) | 1.4.0 |
 | Per-entry delete | `handle_admin_actions()` (`fpad_action=delete`), `entry_key()` | 1.4.0 |
 | Clear whole log | `handle_clear_log()` (POST, processed during `render_log_page()`) | 1.1.0 |
 | CSV/JSON export | `export_log()` (`admin_post_fpad_export_log`), `csv_safe()` | 1.4.0 |
-| Copy-to-clipboard bug report | `build_report()` + inline vanilla JS emitted by `render_log_table()` | 1.4.0 |
+| Copy-to-clipboard bug report | `build_report()` + `assets/js/admin.js` (`.fpad-copy` / `data-fpad-report`) | 1.4.0 |
+| Confirm guards, live list filter, switch captions | `assets/js/admin.js` (`data-fpad-confirm`, `data-fpad-filter`, `data-fpad-switch-text`) | 1.6.0 |
 | Settings tab: log-only mode + protected plugins | `render_settings_tab()`, `handle_settings_save()`, `get_settings()`, `get_active_plugin_choices()` | 1.3.0 |
 | Settings tab: Notifications section (channels, statuses, cooldown) + lazy drain-cron scheduling | `render_settings_tab()`, `handle_settings_save()` | 1.5.0 |
 | Test notification buttons | `handle_test_alert()` (`admin_post_fpad_test_alert`) → `FPAD_Notifier::send_test()`; feedback via `fpad_test` query args in `render_log_page()` | 1.5.0 |
-| "Protection last verified" heartbeat line + debug-info row | `last_watchdog_check()`, `render_protection_banner()`, `add_debug_information()` | 1.5.0 |
+| "Protection last verified" heartbeat chip + debug-info row | `last_watchdog_check()`, `render_protection_banner()`, `add_debug_information()` | 1.5.0 |
 | Suppress other plugins' notices on the log screen | `maybe_suppress_admin_notices()` on `current_screen` | 1.4.0 |
 | Site Health: protection test | `register_site_health_test()`, `site_health_test()` | 1.3.0 |
 | Site Health: debug info section | `add_debug_information()` | 1.3.0 |
@@ -101,7 +105,8 @@ The screen is **Tools → Fatal Plugin Log** (`tools.php?page=fpad-log`), regist
 | i18n | `FPAD_Utils::load_textdomain()`; POT at `languages/fatal-plugin-auto-deactivator.pot` | Shutdown-context strings are deliberately untranslated |
 | WP.org listing copy, FAQ, changelog | `readme.txt` | Must be updated alongside user-visible behavior changes |
 | CI: release deploy / zip build / (dormant) asset sync | `.github/workflows/release.yml`, `build-archive.yml`, `assets.yml` | See [deployment.md](deployment.md) |
-| Distribution exclusions | `.distignore` (authoritative), `.gitattributes` (partial mirror) | `docs/`, `CLAUDE.md`, `.claude` never ship |
+| Admin stylesheet build (Tailwind CLI) | `package.json` scripts, `assets/src/admin.css` → `assets/css/admin.css` | Output is committed; the shipped plugin has no build step. See [ui.md](ui.md) |
+| Distribution exclusions | `.distignore` (authoritative), `.gitattributes` (partial mirror) | `docs/`, `CLAUDE.md`, `.claude`, `assets/src`, `package.json` never ship |
 
 There are **no REST endpoints, no AJAX handlers, no shortcodes, and no blocks**. Since 1.5.0 there are two cron events (`fpad_watchdog_check`, hourly; `fpad_notifier_drain`, hourly + lazily scheduled) and one public filter (`fpad_watchdog_interval`). The only HTTP entry points beyond normal page loads are the admin-page GET/POST actions and the two `admin-post.php` actions (`fpad_export_log`, `fpad_test_alert`) listed above.
 
@@ -119,9 +124,11 @@ The classic trap in this codebase is editing one side of a mirrored pair. Check 
 | `FPAD_Fatal_Error_Handler::build_alert_email_body()` field order | `FPAD_Admin::build_report()` | The alert email mirrors the copy-to-clipboard bug report layout; the handler cannot call the admin class at shutdown |
 | `FPAD_Plugin_Lifecycle::describe_status()` wording | `FPAD_Admin::protection_message()` | Watchdog alert bodies and the admin banner must tell the same story; the admin method is private, so the wording is duplicated |
 | The `stranded` path in `FPAD_Dropin_Manager::verify_protection()` | `FPAD_PLUGIN_DIR` computation in the drop-in (and its generator) | Both derive the handler path relative to `WP_CONTENT_DIR`; on symlinked installs this deliberately differs from the main plugin's `FPAD_PLUGIN_DIR` constant |
-| The `status` vocabulary in `build_plugin_result()` / `add_to_deactivation_log()` | `FPAD_Admin::status_badge()`, `entry_status()`, and the statuses array in `render_filter_bar()` | New status values need a badge, filter option, and legacy-inference handling |
+| The `status` vocabulary in `build_plugin_result()` / `add_to_deactivation_log()` | `FPAD_Admin::status_meta()` (label + badge variant + icon, feeds the badges, the outcome filter and the notification checklist) and `entry_status()` | New status values need presentation, a filter option, and legacy-inference handling |
+| Any markup that adds a `fpad:` utility class | Run `npm run build` and commit `assets/css/admin.css` | Tailwind only emits classes it finds when scanning; a stale build silently drops the style |
+| The design tokens in `assets/src/admin.css` (`@theme`) | The CSS variables inlined in `FPAD_Fatal_Error_Handler::display_custom_error_page()` | The error page runs at shutdown and cannot load the stylesheet, so it repeats the palette by hand |
 | Error-type map in `FPAD_Admin::get_error_type_string()` | The `switch` in `display_custom_error_page()` and the allowlist in `detect_error()` | Three copies of the E_* vocabulary |
-| Log entry schema in `add_to_deactivation_log()` | `render_log_table()` (display), `export_log()` (CSV columns), `build_report()` (copy text), possibly `log_fingerprint()`/`entry_key()`, and the schema doc in [reference.md](reference.md) | Every consumer of `fpad_deactivation_log` |
+| Log entry schema in `add_to_deactivation_log()` | `render_entries()` (display), `export_log()` (CSV columns), `build_report()` (copy text), possibly `log_fingerprint()`/`entry_key()`, and the schema doc in [reference.md](reference.md) | Every consumer of `fpad_deactivation_log` |
 | `Version:` header in the main file | `FPAD_VERSION` constant + `Stable tag:` in `readme.txt` | Three-place version bump (see [deployment.md](deployment.md)) |
 | `.distignore` | `.gitattributes` `export-ignore` entries | Both filter distribution artifacts (`.distignore` wins for the 10up deploy; `.gitattributes` currently lags — see deployment.md) |
 
@@ -147,6 +154,10 @@ Note there are **two different md5 identities** for log entries — do not confl
 3. Read it with `isset()` fallbacks everywhere — **old entries in the wild will not have it** (see the legacy-entry inference in `FPAD_Admin::entry_status()` for the pattern).
 4. Surface it: `render_log_table()` (usually the meta row), `export_log()` (new CSV column + `csv_safe()` if user-influenced), `build_report()` if support-relevant.
 5. Update the entry schema in [reference.md](reference.md).
+
+### Change anything visual
+
+Read [ui.md](ui.md) first: it lists the design tokens, the `fpad-*` component classes, the `FPAD_Admin_UI` helper API and the JS markup contracts. Then rebuild (`npm run build`) and commit `assets/css/admin.css` with your change.
 
 ### Change the public error page
 

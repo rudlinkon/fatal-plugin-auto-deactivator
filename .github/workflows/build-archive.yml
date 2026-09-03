@@ -13,5 +13,6 @@ jobs:
         uses: rudlinkon/action-wordpress-build-zip@master
         with:
           retention-days: 7 # Optional; defaults to 3
-          npm-run-build: true # Optional; defaults to false
-          node-version: 14 # Optional; defaults to 16
+          # The built admin CSS is committed, so there is nothing to build here.
+          # (Tailwind v4 also needs Node >= 20, which this action does not provide.)
+          npm-run-build: false # Optional; defaults to false

@@ -1461,14 +1461,16 @@ class FPAD_Fatal_Error_Handler {
 	}
 
 	/**
-	 * Display a custom error page with warning and reload button
+	 * Render the visitor-facing error page.
 	 *
-	 * Renders and flushes the page but does NOT exit — handle() exits after the
-	 * post-page work (alert sends) so those can never delay the visitor.
+	 * Runs in the shutdown context, so everything here is self-contained: the
+	 * styles are inline (no enqueue, no request), the markup uses no WordPress
+	 * template functions, and every dynamic value goes through the pure-PHP
+	 * esc()/esc_link() helpers. See docs/ui.md for the shared design tokens.
 	 *
-	 * @param array      $error         Error information
-	 * @param array|null $plugin_result Outcome from maybe_deactivate_plugin(), or null
-	 * @return bool Whether the page was rendered (false when headers were already sent)
+	 * @param array      $error         Error information.
+	 * @param array|null $plugin_result Outcome from maybe_deactivate_plugin(), or null.
+	 * @return bool
 	 */
 	protected function display_custom_error_page( $error, $plugin_result ) {
 		// With WP_DEBUG_DISPLAY on, PHP prints the fatal — file paths, stack trace —
@@ -1527,13 +1529,15 @@ class FPAD_Fatal_Error_Handler {
 			$home_url = '/';
 		}
 
+		$resolved = ( $plugin_result && ! empty( $plugin_result['deactivated'] ) );
+
 		// Prepare plugin information. Name/Version come from plugin headers (author
 		// controlled), so escape them before they reach the HTML.
 		$plugin_info = '';
-		if ( $plugin_result && ! empty( $plugin_result['deactivated'] ) ) {
+		if ( $resolved ) {
 			$plugin_name    = $this->esc( $plugin_result['plugin_name'] );
 			$plugin_version = $plugin_result['plugin_version'] ? ' v' . $this->esc( $plugin_result['plugin_version'] ) : '';
-			$plugin_info    = '<p>The plugin <strong>' . $plugin_name . $plugin_version . '</strong> has been automatically deactivated to prevent further errors.</p>';
+			$plugin_info    = '<p class="fpad-note"><span class="fpad-note-label">Deactivated</span> <strong>' . $plugin_name . $plugin_version . '</strong> was switched off to keep the rest of the site online.</p>';
 		}
 
 		// Tailor the messaging to the detected source of the error and whether we
@@ -1544,7 +1548,7 @@ class FPAD_Fatal_Error_Handler {
 
 		switch ( $source ) {
 			case 'plugin':
-				if ( $plugin_result && ! empty( $plugin_result['deactivated'] ) ) {
+				if ( $resolved ) {
 					$intro_message   = 'A fatal error was caused by a plugin on your website. The Fatal Plugin Auto Deactivator identified the plugin and automatically deactivated it to resolve the issue.';
 					$generic_message = 'A plugin caused a technical error. The issue has been resolved by automatically deactivating the problematic plugin.';
 					$closing_message = 'You can now safely reload the page to continue browsing the site.';
@@ -1606,113 +1610,244 @@ class FPAD_Fatal_Error_Handler {
 				&& ! ( defined( 'WP_DEBUG_DISPLAY' ) && false === WP_DEBUG_DISPLAY );
 		}
 
+		// The headline speaks to the visitor's situation; the pill states what the
+		// plugin was able to do about it.
+		$headline   = $resolved ? 'The problem has been fixed' : 'This page is temporarily unavailable';
+		$pill_text  = $resolved ? 'Resolved automatically' : 'Needs attention';
+		$pill_class = $resolved ? 'fpad-pill fpad-pill--ok' : 'fpad-pill fpad-pill--warn';
+		$title      = $show_details
+			? $error_type . ' — ' . $site_name
+			: $site_name . ' — temporarily unavailable';
+
+		$icon = $resolved
+			? '<path d="M12 3l7 3v5.5c0 4.4-3 7.4-7 9.5-4-2.1-7-5.1-7-9.5V6z"/><path d="M9 12l2 2 4-4"/>'
+			: '<path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>';
+
+		$detail = $show_details
+			? $plugin_info . '<div class="fpad-detail">
+					<p class="fpad-detail-label">' . $this->esc( $error_type ) . '</p>
+					<p class="fpad-message">' . $this->esc( $error['message'] ) . '</p>
+					<p class="fpad-location">' . $this->esc( $error['file'] ) . ' &middot; line ' . $this->esc( $error['line'] ) . '</p>
+				</div>'
+			: '<div class="fpad-detail fpad-detail--plain">
+					<p>' . $this->esc( $generic_message ) . '</p>
+				</div>';
+
 		// Output the error page
 		echo '<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="utf-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title>' . $this->esc( $error_type ) . ' - ' . $this->esc( $site_name ) . '</title>
-			<style>
-				body {
-					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-					background: #f1f1f1;
-					color: #444;
-					line-height: 1.5;
-					margin: 0;
-					padding: 0;
-				}
-				.fpad_error_container {
-					max-width: 800px;
-					margin: 50px auto;
-					padding: 30px;
-					background: #fff;
-					border-radius: 5px;
-					box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-				}
-				.fpad_error_header {
-					background: #dc3232;
-					color: #fff;
-					padding: 15px 20px;
-					margin: -30px -30px 20px;
-					border-radius: 5px 5px 0 0;
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-				}
-				.fpad_error_header h1 {
-					margin: 0;
-					font-size: 20px;
-					font-weight: 600;
-				}
-				.fpad_error_details {
-					background: #f8f8f8;
-					padding: 15px;
-					border-radius: 3px;
-					margin: 20px 0;
-					border-left: 4px solid #ddd;
-					overflow-x: auto;
-				}
-				.fpad_error_message {
-					font-family: monospace;
-					margin: 0;
-					word-break: break-word;
-					white-space: pre-wrap;
-				}
-				.fpad_error_location {
-					margin-top: 10px;
-					font-size: 14px;
-					color: #666;
-				}
-				.fpad_button {
-					display: inline-block;
-					padding: 8px 16px;
-					background: #0073aa;
-					color: #fff;
-					text-decoration: none;
-					border-radius: 3px;
-					cursor: pointer;
-					font-size: 14px;
-					margin-right: 10px;
-				}
-				.fpad_button:hover {
-					background: #005d8c;
-				}
-				.fpad_button.fpad_secondary {
-					background: #f7f7f7;
-					color: #555;
-					border: 1px solid #ccc;
-				}
-				.fpad_button.fpad_secondary:hover {
-					background: #f0f0f0;
-				}
-				.fpad_actions {
-					margin-top: 25px;
-				}
-			</style>
-		</head>
-		<body>
-			<div class="fpad_error_container">
-				<div class="fpad_error_header">
-					<h1>' . $this->esc( $error_type ) . ' Detected</h1>
-				</div>
-				<p>' . $this->esc( $intro_message ) . '</p>' .
-		     //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		     ( $show_details ? $plugin_info . '
-				<div class="fpad_error_details">
-					<p class="fpad_error_message">' . $this->esc( $error['message'] ) . '</p>
-					<p class="fpad_error_location">File: ' . $this->esc( $error['file'] ) . ' on line ' . $this->esc( $error['line'] ) . '</p>
-				</div>' : '<div class="fpad_error_details">
-					<p>' . $this->esc( $generic_message ) . '</p>
-				</div>' ) . '
-				<p>' . $this->esc( $closing_message ) . '</p>
-				<div class="fpad_actions">
-					<a href="' . $this->esc_link( $this->current_request_uri() ) . '" class="fpad_button">Reload Page</a>
-					<a href="' . $this->esc_link( $home_url ) . '" class="fpad_button fpad_secondary">Go to Homepage</a>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex, nofollow">
+	<title>' . $this->esc( $title ) . '</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--fpad-bg: #f6f7f7;
+			--fpad-surface: #ffffff;
+			--fpad-border: #dcdcde;
+			--fpad-ink: #1d2327;
+			--fpad-muted: #50575e;
+			--fpad-soft: #f0f0f1;
+			--fpad-brand: #2271b1;
+			--fpad-brand-ink: #ffffff;
+			--fpad-ok: #00a32a;
+			--fpad-ok-soft: #edfaef;
+			--fpad-ok-ink: #005c12;
+			--fpad-warn: #dba617;
+			--fpad-warn-soft: #fdf6e6;
+			--fpad-warn-ink: #7a5c00;
+			--fpad-danger: #d63638;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--fpad-bg: #101517;
+				--fpad-surface: #1d2327;
+				--fpad-border: #2c3338;
+				--fpad-ink: #f0f0f1;
+				--fpad-muted: #a7aaad;
+				--fpad-soft: #2c3338;
+				--fpad-brand: #5b9dd9;
+				--fpad-brand-ink: #101517;
+				--fpad-ok-soft: #14301b;
+				--fpad-ok-ink: #a3e0b3;
+				--fpad-warn-soft: #332b12;
+				--fpad-warn-ink: #f2d38a;
+				--fpad-danger: #f4b7b7;
+			}
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			padding: 24px 16px;
+			background: var(--fpad-bg);
+			color: var(--fpad-ink);
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+			font-size: 15px;
+			line-height: 1.6;
+			-webkit-font-smoothing: antialiased;
+		}
+		.fpad-card {
+			max-width: 640px;
+			margin: 48px auto;
+			background: var(--fpad-surface);
+			border: 1px solid var(--fpad-border);
+			border-radius: 12px;
+			box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+			overflow: hidden;
+		}
+		.fpad-card-body { padding: 28px; }
+		.fpad-head {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			margin-bottom: 18px;
+		}
+		.fpad-icon {
+			flex: 0 0 auto;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 999px;
+			background: var(--fpad-warn-soft);
+			color: var(--fpad-warn-ink);
+		}
+		.fpad-icon--ok { background: var(--fpad-ok-soft); color: var(--fpad-ok-ink); }
+		.fpad-icon svg { width: 22px; height: 22px; }
+		h1 {
+			margin: 0;
+			font-size: 20px;
+			line-height: 1.3;
+			font-weight: 600;
+			letter-spacing: -.01em;
+		}
+		.fpad-pill {
+			display: inline-block;
+			margin-top: 6px;
+			padding: 2px 10px;
+			border-radius: 999px;
+			font-size: 12px;
+			font-weight: 600;
+		}
+		.fpad-pill--ok { background: var(--fpad-ok-soft); color: var(--fpad-ok-ink); }
+		.fpad-pill--warn { background: var(--fpad-warn-soft); color: var(--fpad-warn-ink); }
+		p { margin: 0 0 14px; }
+		.fpad-lead { color: var(--fpad-muted); }
+		.fpad-note {
+			padding: 12px 14px;
+			border-radius: 8px;
+			background: var(--fpad-ok-soft);
+			color: var(--fpad-ok-ink);
+			font-size: 14px;
+		}
+		.fpad-note-label {
+			display: inline-block;
+			margin-right: 6px;
+			padding: 1px 8px;
+			border-radius: 999px;
+			background: rgba(0,0,0,.08);
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+		.fpad-detail {
+			margin: 18px 0;
+			padding: 14px 16px;
+			border-left: 3px solid var(--fpad-danger);
+			border-radius: 8px;
+			background: var(--fpad-soft);
+			overflow-x: auto;
+		}
+		.fpad-detail--plain {
+			border-left-color: var(--fpad-border);
+			color: var(--fpad-muted);
+			font-size: 14px;
+		}
+		.fpad-detail p { margin: 0; }
+		.fpad-detail .fpad-detail-label {
+			margin-bottom: 6px;
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+			color: var(--fpad-danger);
+		}
+		.fpad-message {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 13px;
+			line-height: 1.6;
+			white-space: pre-wrap;
+			word-break: break-word;
+		}
+		.fpad-detail .fpad-location {
+			margin-top: 10px;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 12px;
+			color: var(--fpad-muted);
+			word-break: break-all;
+		}
+		.fpad-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			padding: 18px 28px;
+			border-top: 1px solid var(--fpad-border);
+			background: var(--fpad-soft);
+		}
+		.fpad-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 9px 18px;
+			border: 1px solid var(--fpad-brand);
+			border-radius: 6px;
+			background: var(--fpad-brand);
+			color: var(--fpad-brand-ink);
+			font-size: 14px;
+			font-weight: 500;
+			text-decoration: none;
+		}
+		.fpad-button:hover, .fpad-button:focus { filter: brightness(.94); }
+		.fpad-button--secondary {
+			border-color: var(--fpad-border);
+			background: var(--fpad-surface);
+			color: var(--fpad-ink);
+		}
+		@media (max-width: 480px) {
+			.fpad-card-body { padding: 22px 18px; }
+			.fpad-actions { padding: 16px 18px; }
+			.fpad-button { flex: 1 1 auto; }
+		}
+	</style>
+</head>
+<body>
+	<main class="fpad-card">
+		<div class="fpad-card-body">
+			<div class="fpad-head">
+				<span class="fpad-icon' . ( $resolved ? ' fpad-icon--ok' : '' ) . '">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $icon . '</svg>
+				</span>
+				<div>
+					<h1>' . $this->esc( $headline ) . '</h1>
+					<span class="' . $pill_class . '">' . $this->esc( $pill_text ) . '</span>
 				</div>
 			</div>
-		</body>
-		</html>';
+			<p class="fpad-lead">' . $this->esc( $intro_message ) . '</p>' .
+			//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$detail . '
+			<p class="fpad-lead">' . $this->esc( $closing_message ) . '</p>
+		</div>
+		<div class="fpad-actions">
+			<a href="' . $this->esc_link( $this->current_request_uri() ) . '" class="fpad-button">Reload page</a>
+			<a href="' . $this->esc_link( $home_url ) . '" class="fpad-button fpad-button--secondary">Go to homepage</a>
+		</div>
+	</main>
+</body>
+</html>';
 
 		// Push the page to the client now, so the alert sends that follow happen
 		// on an already-delivered response.

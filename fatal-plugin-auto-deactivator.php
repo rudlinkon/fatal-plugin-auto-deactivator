@@ -43,6 +43,7 @@ if ( ! defined( 'FPAD_PLUGIN_URL' ) ) {
 require_once FPAD_PLUGIN_DIR . 'includes/class-fatal-error-handler.php';
 require_once FPAD_PLUGIN_DIR . 'includes/class-dropin-manager.php';
 require_once FPAD_PLUGIN_DIR . 'includes/class-admin.php';
+require_once FPAD_PLUGIN_DIR . 'includes/class-admin-ui.php';
 require_once FPAD_PLUGIN_DIR . 'includes/class-notifier.php';
 require_once FPAD_PLUGIN_DIR . 'includes/class-plugin-lifecycle.php';
 require_once FPAD_PLUGIN_DIR . 'includes/class-utils.php';

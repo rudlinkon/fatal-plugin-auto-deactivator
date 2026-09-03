@@ -4,10 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Fatal Plugin Auto Deactivator** (slug: `fatal-plugin-auto-deactivator`) is a WordPress.org-distributed plugin that automatically deactivates any plugin causing a fatal PHP error, logs the incident, and shows a custom error page instead of the white screen of death. Plain PHP — no build step, no test suite, no node/npm. No REST endpoints, no AJAX. Since 1.5.0: two cron events (watchdog + alert drain) and one public filter (`fpad_watchdog_interval`).
+**Fatal Plugin Auto Deactivator** (slug: `fatal-plugin-auto-deactivator`) is a WordPress.org-distributed plugin that automatically deactivates any plugin causing a fatal PHP error, logs the incident, and shows a custom error page instead of the white screen of death. Plain PHP, no test suite. No REST endpoints, no AJAX. Since 1.5.0: two cron events (watchdog + alert drain) and one public filter (`fpad_watchdog_interval`).
+
+**The shipped plugin has no build step**, but the admin stylesheet is generated: `assets/src/admin.css` (Tailwind CSS v4) → `assets/css/admin.css` via `npm run build`, and the **built file is committed**. Any markup change that introduces a new `fpad:` utility class requires a rebuild + commit of `assets/css/admin.css`, or the style silently does not exist. Read `docs/ui.md` before touching anything that renders markup or CSS.
 
 Detailed docs live in `docs/` (excluded from distribution; keep them updated when behavior changes):
 - `docs/feature-map.md` — **feature → file/function lookup, sync pairs, playbooks for common changes; start here when locating or changing a feature**
+- `docs/ui.md` — **design tokens, `fpad-*` component vocabulary, Tailwind build, `FPAD_Admin_UI` API, JS markup contracts; start here for any UI change**
 - `docs/architecture.md` — entry points, drop-in mechanism, error flow, execution contexts
 - `docs/reference.md` — option schemas, hook table, nonces/admin surfaces, per-class method reference
 - `docs/development.md` — setup, conventions, manual test scenarios
@@ -15,6 +18,7 @@ Detailed docs live in `docs/` (excluded from distribution; keep them updated whe
 
 - Minimum: WordPress 5.3, PHP 7.0 (the drop-in mechanism requires WP ≥ 5.2; code must stay PHP 7.0 compatible).
 - Code follows WordPress Coding Standards (tabs, Yoda conditions, `esc_html`/`esc_url` escaping, nonces). `phpcs:ignore` annotations are used deliberately — keep them.
+- Admin CSS is Tailwind with the `fpad:` prefix and **no preflight** (it must never reset wp-admin). Components are `.fpad-*` classes scoped under `#fpad-app`; never use `!important`. The visitor error page is styled by inline CSS inside `display_custom_error_page()` and must stay self-contained (no enqueue, no WP APIs) — the design tokens are duplicated there on purpose (sync pair).
 
 ## Architecture: the drop-in mechanism
 
@@ -40,6 +44,7 @@ The drop-in file must always exist and reference a valid class file inside this 
 
 - `FPAD_Fatal_Error_Handler` — error detection, plugin matching/deactivation, logging, custom error page (shutdown context, guarded WP calls only). Deactivation honors `fpad_settings` (log-only mode + protected-plugins allowlist), read via the guarded `get_settings()`; a matched-but-not-deactivated plugin is still attributed and logged with a `status`.
 - `FPAD_Dropin_Manager` — install/remove/verify the drop-in copy in `wp-content/`; `get_status()` reports protection state (`active`/`foreign`/`missing`/`unwritable`/`no_filesystem`). Ownership is matched against the `OWNERSHIP_MARKER` constant.
+- `FPAD_Admin_UI` — presentation-only helpers for the admin screens: inline SVG icons, buttons, badges, chips, stat cards, panels, setting rows, switches, checkbox cards, selects. Every helper escapes its own arguments and returns HTML. `FPAD_Admin` owns data and composition; this class owns markup.
 - `FPAD_Admin` — admin notices, Tools → "Fatal Plugin Log" page (`tools.php?page=fpad-log`) with **Log** + **Settings** tabs and a protection-status banner, clear-log form (nonce `fpad_clear_log`), settings form (nonce `fpad_save_settings`), nonce'd reinstall action (`fpad_reinstall`), site-wide protection warning notice, Site Health test + debug info, "Settings"/"View Log" plugin action links. The log viewer (since 1.4.0) also supports source/status filters + search (GET), per-entry delete (`fpad_delete_{key}` nonce), CSV/JSON export (`admin_post_fpad_export_log`, nonce `fpad_export_log`), and a vanilla-JS copy-to-clipboard bug report. On the log screen it also strips other plugins'/core `admin_notices` via `current_screen` (`maybe_suppress_admin_notices`), keeping only its own inline banner and `settings_errors()` feedback.
 - `FPAD_Plugin_Lifecycle` — activation/deactivation/uninstall hooks + `admin_init` drop-in check + hourly protection **watchdog** (`fpad_watchdog_check` cron: `verify_protection()` → heal missing/foreign → alert; state in `fpad_watchdog_state`; interval filter `fpad_watchdog_interval` — the plugin's only public hook).
 - `FPAD_Notifier` — (1.5.0) alert delivery on normal requests: drains `fpad_alert_queue` (`init` prio 20 + lazy hourly cron `fpad_notifier_drain`), test sends, and `dispatch_event()` used by the watchdog (falls back to `wp_mail(admin_email)` when no channel configured).

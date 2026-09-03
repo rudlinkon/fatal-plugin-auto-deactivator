@@ -51,3 +51,4 @@ node_modules/           export-ignore
 /src/                   export-ignore
 build/                  export-ignore
 postcss.config.js       export-ignore
+assets/src/             export-ignore
